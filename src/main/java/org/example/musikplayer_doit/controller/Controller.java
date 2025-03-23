@@ -9,4 +9,8 @@ public class Controller {
         System.out.println("Play");
 
     }
+
+    public void emptyTest () {
+        System.out.println("Empty");
+    }
 }
