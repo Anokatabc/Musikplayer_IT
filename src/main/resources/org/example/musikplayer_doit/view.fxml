@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.control.Slider?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TreeView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<VBox prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="org.example.musikplayer_doit.controller.Controller">
+    <MenuBar>
+        <Menu text="File">
+            <MenuItem text="Close"/>
+        </Menu>
+        <Menu text="Edit">
+            <MenuItem text="Delete"/>
+        </Menu>
+        <Menu text="Help">
+            <MenuItem text="About"/>
+        </Menu>
+    </MenuBar>
+    <HBox prefHeight="336.0" prefWidth="600.0">
+        <TreeView prefHeight="307.0" prefWidth="118.0"/>
+        <TableView prefHeight="280.0" prefWidth="300.0">
+            <columns>
+                <TableColumn prefWidth="33.0" text="Title"/>
+                <TableColumn prefWidth="33.0" text="Length"/>
+                <TableColumn prefWidth="33.0" text="Album"/>
+                <TableColumn prefWidth="33.0" text="Artist"/>
+                <TableColumn prefWidth="33.0" text="C2"/>
+            </columns>
+        </TableView>
+        <TableView prefHeight="307.0" prefWidth="121.0">
+            <columns>
+                <TableColumn prefWidth="70.0" text="Title"/>
+                <TableColumn prefWidth="50.0" text="Length"/>
+            </columns>
+        </TableView>
+    </HBox>
+    <BorderPane prefHeight="200.0" prefWidth="200.0">
+        <bottom>
+            <HBox prefHeight="100.0" prefWidth="200.0" BorderPane.alignment="CENTER">
+                <Slider prefHeight="32.0" prefWidth="105.0"/>
+                <Button prefHeight="50.0" prefWidth="50.0" style="-fx-background-radius: 4px;" text="Stop"/>
+                <Button prefHeight="50.0" prefWidth="50.0" text="⏮"/>
+                <Button onAction="#clickPlay" prefHeight="50.0" prefWidth="50.0"
+                        style="-fx-background-radius: 50; -fx-font-size: 25px;" text="▶⏸" textOverrun="CLIP">
+                    <font>
+                        <Font size="38.0"/>
+                    </font>
+                </Button>
+                <Button prefHeight="50.0" prefWidth="50.0" text="⏭"/>
+                <ProgressBar prefHeight="35.0" prefWidth="200.0" progress="0.0"/>
+            </HBox>
+        </bottom>
+    </BorderPane>
+</VBox>
