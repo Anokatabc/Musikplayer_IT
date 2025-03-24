@@ -6,7 +6,7 @@ package org.example.musikplayer_doit.controller;
 public class Controller {
 
     public void clickPlay () {
-        System.out.println("Play");
+        System.out.println("Playingssss");
 
     }
 
