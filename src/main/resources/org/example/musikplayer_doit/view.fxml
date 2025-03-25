@@ -31,19 +31,19 @@
       <SplitPane dividerPositions="0.2063063063063063, 0.8018018018018018" prefHeight="336.0" prefWidth="1114.0">
         <items>
               <TreeView fx:id="folderTreeView" prefHeight="334.0" prefWidth="107.0" />
-              <TableView prefHeight="334.0" prefWidth="545.0">
+              <TableView fx:id="centerTableView" prefHeight="334.0" prefWidth="111.0">
+                  <columns>
+                      <TableColumn fx:id="titleColumn" prefWidth="131.0" text="Title" />
+                      <TableColumn prefWidth="131.0" text="Length" />
+                      <TableColumn prefWidth="131.0" text="Album" />
+                      <TableColumn prefWidth="131.0" text="Artist" />
+                      <TableColumn prefWidth="131.0" text="C2" />
+                  </columns>
+              </TableView>
+              <TableView fx:id="listTableView" prefHeight="334.0" prefWidth="545.0">
                   <columns>
                       <TableColumn prefWidth="70.0" text="Title" />
                       <TableColumn prefWidth="50.0" text="Length" />
-                  </columns>
-              </TableView>
-              <TableView prefHeight="334.0" prefWidth="111.0">
-                  <columns>
-                      <TableColumn prefWidth="33.0" text="Title" />
-                      <TableColumn prefWidth="33.0" text="Length" />
-                      <TableColumn prefWidth="33.0" text="Album" />
-                      <TableColumn prefWidth="33.0" text="Artist" />
-                      <TableColumn prefWidth="33.0" text="C2" />
                   </columns>
               </TableView>
         </items>
@@ -53,7 +53,7 @@
         <bottom>
             <HBox prefHeight="100.0" prefWidth="200.0" BorderPane.alignment="CENTER">
                 <Slider prefHeight="32.0" prefWidth="105.0" />
-                <Button prefHeight="50.0" prefWidth="50.0" style="-fx-background-radius: 4px;" text="Stop" />
+                <Button onAction="#clickStop" prefHeight="50.0" prefWidth="50.0" style="-fx-background-radius: 4px;" text="Stop" />
                 <Button prefHeight="50.0" prefWidth="50.0" text="⏮" />
                 <Button onAction="#clickPlay" prefHeight="50.0" prefWidth="50.0" style="-fx-background-radius: 50; -fx-font-size: 25px;" text="▶⏸" textOverrun="CLIP">
                     <font>
