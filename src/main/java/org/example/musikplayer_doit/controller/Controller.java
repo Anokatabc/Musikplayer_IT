@@ -1,14 +1,20 @@
 package org.example.musikplayer_doit.controller;
-
+//test 12356
+import javafx.application.Platform;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
+import org.example.musikplayer_doit.model.Song;
 
 import java.io.File;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.ResourceBundle;
 import java.util.concurrent.*;
 
@@ -17,18 +23,21 @@ import java.util.concurrent.*;
 
 public class Controller implements Initializable {
 
-MediaPlayer player;
+    MediaPlayer player;
 
-@FXML
-private TreeView<File> folderTreeView;
-@FXML
-private TableView<File> centerTableView;
-@FXML
-private TableView<File> listTableView;
-@FXML
-TableColumn<File, String> titleColumn; //TableColumn<S, T> S=Datentyp von TableView, T=Datentyp in Spalte
+    @FXML
+    private TreeView<File> folderTreeView;
+    @FXML
+    private TableView<Song> centerTableView;
+    @FXML
+    private TableView<File> listTableView;
+    @FXML
+    TableColumn<File, String> titleColumn; //TableColumn<S, T> S=Datentyp von TableView, T=Datentyp in Spalte
 
-private ExecutorService executorService;
+    private ExecutorService executorService;
+    public ObservableList<Song> centerList = FXCollections.observableArrayList();
+
+    // - - - - - - - - - - - - - - - - - - - - - PlaybackController - - - - - - - - - - - - - - - - - - - - - - - - -
 
     @FXML
     public void clickPlay() {
@@ -56,6 +65,20 @@ private ExecutorService executorService;
             System.out.println("Stopped playback");
         }
     }
+
+    @FXML void clickPrevious(){
+        if (player != null){
+            //playlist.last
+        }
+    }
+
+    @FXML void clickNext(){
+        if (player != null){
+            //playlist.next
+        }
+    }
+
+    // - - - - - - - - - - - - - - - - - - - - - TreeViewController - - - - - - - - - - - - - - - - - - - - - - - - -
 
     // FileTreeCellFactory
 
@@ -102,37 +125,93 @@ private ExecutorService executorService;
             if (files != null) {
                 for (var f : files) {
                     TreeItem<File> item = new TreeItem<>(f);
-                    parentItem.getChildren().add(item);
+                    Platform.runLater(() -> parentItem.getChildren().add(item));
                     CreateTreeTask task = new CreateTreeTask(f, item);
                     task.fork();
+
                 }
             }
         }
     }
+
+    // - - - - - - - - - - - - - - - - - - - - - CenterTableViewController / MediaSelectionController - - - - - - - - - - - - - - - - - - - - - - - - -
+//ToDo: Nach mp3 Dateien filtern, möglichst vor dem ersten Ladeprozess
+//ToDo: Dateipfade im TreeView auf Ordnernamen reduzieren Cellfactory?
+//ToDo: Dateipfade in Titelspalte auf Dateinamen reduzieren Cellfactory? Cut/Trim Methode?
+    @FXML
+    private void selectItem() {
+        TreeItem<File> item = folderTreeView.getSelectionModel().getSelectedItem();
+//        if (folderTreeView.getSelectionModel().getSelectedItem() != item){
+            centerList.clear();
+//        }
+        if (item != null) {
+            //File data = item.getValue();
+            File data = item.getValue();
+            System.out.println("Selected: "+data);
+            if (data.isDirectory()){
+                File[] files = data.listFiles();
+                for (var f : files){
+
+                    Song song = new Song(f.getAbsolutePath());
+                    centerList.add (song);
+            }
+
+            }
+            centerTableView.setItems(centerList);
+            titleColumn.setCellValueFactory(new PropertyValueFactory<>("title"));
+
+
+//            loadFilesFromPath(data);
+//            centerTableView.setItems(centerList);
+//            titleColumn.getTableView();
+        }
+    }
+
+//    public ArrayList <Song> createCenterView () {
+//        ArrayList <Song> asd;
+//        return asd;
+//    }
+
+
+    private void loadFilesFromPath(File folder){
+//        if (folder != null && folder.isDirectory()){
+//            File[] files = folder.listFiles((dir, name) -> name.toLowerCase().endsWith(".mp3"));
+//            if (files != null) {
+//                centerList.addAll(files);
+//            }
+//        }
+    }
+
+//    private ArrayList<Song> filesToTableView(ArrayList<File> file){
+//
+//    }
+
+
+//            File[] files = data.listFiles((dir, name) -> name.toLowerCase().endsWith(".mp3"));
+//            if (files != null) {
+//                centerList.addAll(files);
+//            }
+//            centerTableView.setItems(centerList);
+//            titleColumn.getTableView();
+
+
+
 }
 
 
 
 
-        /*
 
-    @FXML
-    private void selectItem () {
-
-    }
-
-    private void loadView () {
-
-
-
-    }
+//    private void loadView () {
+//
+//
+//
+//    }
 
 
 //fxcollections.observablearralist
 
-}
 
-*/
 
 /*
 package org.example.musikplayer_doit.controller;
