@@ -34,10 +34,10 @@
               <TableView fx:id="centerTableView" prefHeight="334.0" prefWidth="111.0">
                   <columns>
                       <TableColumn fx:id="titleColumn" prefWidth="131.0" text="Title" />
-                      <TableColumn prefWidth="131.0" text="Length" />
+                      <TableColumn fx:id="lengthColumn" prefWidth="131.0" text="Length" />
+                      <TableColumn fx:id="pathColumn" prefWidth="131.0" text="Path" />
                       <TableColumn prefWidth="131.0" text="Album" />
                       <TableColumn prefWidth="131.0" text="Artist" />
-                      <TableColumn prefWidth="131.0" text="C2" />
                   </columns>
               </TableView>
               <TableView fx:id="listTableView" prefHeight="334.0" prefWidth="545.0">

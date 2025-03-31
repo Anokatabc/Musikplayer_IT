@@ -8,10 +8,14 @@ public class Song {
 
     private String title;
     private File file;
+    private String path;
 
-public Song (String title){
-    this.title = title;
-//    this.file = file;
+
+
+    public Song (String filePath){
+        this.file = new File(filePath);
+    this.title = file.getName();
+    this.path = filePath;
 }
 
 //    public File getFile() {
@@ -26,8 +30,10 @@ public Song (String title){
         return title;
     }
 
-    public void setTitle(String title) {
-        this.title = title;
+
+    public String getPath() {
+        return path;
     }
+
 
 }
