@@ -65,8 +65,8 @@ public class Controller {
         //        });
 
 
-        task.setOnSucceeded(event -> System.out.println("Finished loading directories!"));
-
+        task.setOnSucceeded(_ -> System.out.println("Finished loading directories!"));
+//_  ist event
         new Thread(task).start();
 
 //normal                                                                                       setCellFactory (...everything below
@@ -236,15 +236,11 @@ public class Controller {
     }
 
     @FXML void clickPrevious(){
-        if (player != null){
-            //playlist.last
-        }
+
     }
 
     @FXML void clickNext(){
-        if (player != null){
-            //playlist.next
-        }
+
     }
 
 
@@ -263,7 +259,7 @@ public class Controller {
             File data = item.getValue();
             System.out.println("Selected: "+data);
             if (data.isDirectory()){
-                File[] files = data.listFiles((dir, str) -> str.toLowerCase().endsWith(".mp3"));
+                File[] files = data.listFiles((_, str) -> str.toLowerCase().endsWith(".mp3"));
                 //assert files != null;
                 if (files != null) {
                     for (var f : files) {
@@ -322,7 +318,7 @@ public class Controller {
 //    }
 
 
-    private void loadFilesFromPath(File folder){
+//    private void loadFilesFromPath(File folder){
 //        if (folder != null && folder.isDirectory()){
 //            File[] files = folder.listFiles((dir, name) -> name.toLowerCase().endsWith(".mp3"));
 //            if (files != null) {
@@ -345,7 +341,7 @@ public class Controller {
 
 
 
-}
+
 
 
 
