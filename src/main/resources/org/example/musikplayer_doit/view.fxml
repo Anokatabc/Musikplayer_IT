@@ -15,7 +15,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<VBox prefHeight="612.0" prefWidth="1112.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.example.musikplayer_doit.controller.Controller">
+<VBox prefHeight="612.0" prefWidth="1119.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.example.musikplayer_doit.controller.Controller">
     <MenuBar>
         <Menu text="File">
             <MenuItem text="Close" />
@@ -27,11 +27,11 @@
             <MenuItem text="About" />
         </Menu>
     </MenuBar>
-    <HBox prefHeight="336.0" prefWidth="600.0">
-      <SplitPane dividerPositions="0.2063063063063063, 0.8018018018018018, 0.5" prefHeight="336.0" prefWidth="1114.0">
+    <HBox prefHeight="547.0" prefWidth="1112.0">
+      <SplitPane dividerPositions="0.218018018018018, 0.7954954954954955, 0.9972972972972973" prefHeight="467.0" prefWidth="1107.0">
         <items>
-              <TreeView fx:id="folderTreeView" onContextMenuRequested="#selectItem" onMouseClicked="#selectItem" prefHeight="334.0" prefWidth="107.0" />
-              <TableView fx:id="centerTableView" prefHeight="334.0" prefWidth="111.0">
+              <TreeView fx:id="folderTreeView" onContextMenuRequested="#selectTreeItem" onMouseClicked="#selectTreeItem" prefHeight="334.0" prefWidth="107.0" />
+              <TableView fx:id="centerTableView" onContextMenuRequested="#showCenterContextMenu" onMouseClicked="#selectTableItem" prefHeight="380.0" prefWidth="652.0">
                   <columns>
                       <TableColumn fx:id="titleColumn" prefWidth="131.0" text="Title" />
                       <TableColumn fx:id="lengthColumn" prefWidth="131.0" text="Length" />
@@ -40,13 +40,13 @@
                       <TableColumn prefWidth="131.0" text="Artist" />
                   </columns>
               </TableView>
-              <TableView fx:id="listTableView" prefHeight="334.0" prefWidth="545.0">
+              <TableView fx:id="playingTableView" prefHeight="334.0" prefWidth="224.0">
                   <columns>
-                      <TableColumn prefWidth="70.0" text="Title" />
-                      <TableColumn prefWidth="50.0" text="Length" />
+                      <TableColumn fx:id="queueTitleColumn" prefWidth="100.0" text="Title" />
+                      <TableColumn fx:id="queueLengthColumn" prefWidth="100.0" text="Length" />
                   </columns>
               </TableView>
-            <TreeView fx:id="folderTreeView1" layoutX="10.0" layoutY="10.0" prefHeight="334.0" prefWidth="107.0" />
+            <TreeView fx:id="folderTreeView1" layoutX="10.0" layoutY="10.0" prefHeight="334.0" prefWidth="109.0" />
         </items>
       </SplitPane>
     </HBox>
