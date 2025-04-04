@@ -12,58 +12,66 @@
 <?import javafx.scene.control.TreeView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<VBox prefHeight="612.0" prefWidth="1119.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.example.musikplayer_doit.controller.Controller">
-    <MenuBar>
-        <Menu text="File">
-            <MenuItem text="Close" />
-        </Menu>
-        <Menu text="Edit">
-            <MenuItem text="Delete" />
-        </Menu>
-        <Menu text="Help">
-            <MenuItem text="About" />
-        </Menu>
-    </MenuBar>
-    <HBox prefHeight="547.0" prefWidth="1112.0">
-      <SplitPane dividerPositions="0.218018018018018, 0.7954954954954955, 0.9972972972972973" prefHeight="467.0" prefWidth="1107.0">
+<BorderPane prefHeight="707.0" prefWidth="1037.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.example.musikplayer_doit.controller.Controller">
+   <bottom>
+      <HBox prefHeight="100.0" prefWidth="200.0" BorderPane.alignment="CENTER">
+         <children>
+            <Slider prefHeight="32.0" prefWidth="105.0" />
+            <Button onAction="#clickStop" prefHeight="50.0" prefWidth="50.0" style="-fx-background-radius: 4px;" text="Stop" />
+            <Button onAction="#clickPrevious" prefHeight="50.0" prefWidth="50.0" text="⏮" />
+            <Button onAction="#clickPlay" prefHeight="50.0" prefWidth="50.0" style="-fx-background-radius: 50; -fx-font-size: 25px;" text="▶⏸" textOverrun="CLIP">
+               <font>
+                  <Font size="38.0" />
+               </font>
+            </Button>
+            <Button onAction="#clickNext" prefHeight="50.0" prefWidth="50.0" text="⏭" />
+            <ProgressBar prefHeight="35.0" prefWidth="200.0" progress="0.0" />
+         </children>
+      </HBox>
+   </bottom>
+   <top>
+      <MenuBar BorderPane.alignment="CENTER">
+         <menus>
+            <Menu text="File">
+               <items>
+                  <MenuItem text="Close" />
+               </items>
+            </Menu>
+            <Menu text="Edit">
+               <items>
+                  <MenuItem text="Delete" />
+               </items>
+            </Menu>
+            <Menu text="Help">
+               <items>
+                  <MenuItem text="About" />
+               </items>
+            </Menu>
+         </menus>
+      </MenuBar>
+   </top>
+   <center>
+      <SplitPane dividerPositions="0.22705314009661837, 0.8367149758454107" prefHeight="160.0" prefWidth="200.0" BorderPane.alignment="CENTER">
         <items>
-              <TreeView fx:id="folderTreeView" onContextMenuRequested="#selectTreeItem" onMouseClicked="#selectTreeItem" prefHeight="334.0" prefWidth="107.0" />
-              <TableView fx:id="centerTableView" onContextMenuRequested="#showCenterContextMenu" onMouseClicked="#selectTableItem" prefHeight="380.0" prefWidth="652.0">
-                  <columns>
-                      <TableColumn fx:id="titleColumn" prefWidth="131.0" text="Title" />
-                      <TableColumn fx:id="lengthColumn" prefWidth="131.0" text="Length" />
-                      <TableColumn fx:id="pathColumn" prefWidth="131.0" text="Path" />
-                      <TableColumn prefWidth="131.0" text="Album" />
-                      <TableColumn prefWidth="131.0" text="Artist" />
-                  </columns>
-              </TableView>
-              <TableView fx:id="playingTableView" prefHeight="334.0" prefWidth="224.0">
-                  <columns>
-                      <TableColumn fx:id="queueTitleColumn" prefWidth="100.0" text="Title" />
-                      <TableColumn fx:id="queueLengthColumn" prefWidth="100.0" text="Length" />
-                  </columns>
-              </TableView>
-            <TreeView fx:id="folderTreeView1" layoutX="10.0" layoutY="10.0" prefHeight="334.0" prefWidth="109.0" />
+            <TreeView fx:id="folderTreeView" minWidth="10.0" onMouseClicked="#selectTreeItem" prefHeight="580.0" prefWidth="381.0" />
+            <TableView fx:id="centerTableView" minWidth="10.0" onMouseClicked="#selectTableItem" prefHeight="580.0" prefWidth="187.0">
+               <columns>
+                  <TableColumn fx:id="titleColumn" prefWidth="131.0" text="Title" />
+                  <TableColumn fx:id="lengthColumn" prefWidth="131.0" text="Length" />
+                  <TableColumn fx:id="pathColumn" prefWidth="131.0" text="Path" />
+                  <TableColumn prefWidth="131.0" text="Album" />
+                  <TableColumn prefWidth="131.0" text="Artist" />
+               </columns>
+            </TableView>
+            <TableView fx:id="playingTableView" minWidth="10.0" prefHeight="580.0" prefWidth="191.0">
+               <columns>
+                  <TableColumn fx:id="queueTitleColumn" prefWidth="100.0" text="Title" />
+                  <TableColumn fx:id="queueLengthColumn" prefWidth="100.0" text="Length" />
+               </columns>
+            </TableView>
         </items>
       </SplitPane>
-    </HBox>
-    <BorderPane prefHeight="200.0" prefWidth="200.0">
-        <bottom>
-            <HBox prefHeight="100.0" prefWidth="200.0" BorderPane.alignment="CENTER">
-                <Slider prefHeight="32.0" prefWidth="105.0" />
-                <Button onAction="#clickStop" prefHeight="50.0" prefWidth="50.0" style="-fx-background-radius: 4px;" text="Stop" />
-                <Button onAction="#clickPrevious" prefHeight="50.0" prefWidth="50.0" text="⏮" />
-                <Button onAction="#clickPlay" prefHeight="50.0" prefWidth="50.0" style="-fx-background-radius: 50; -fx-font-size: 25px;" text="▶⏸" textOverrun="CLIP">
-                    <font>
-                        <Font size="38.0" />
-                    </font>
-                </Button>
-                <Button onAction="#clickNext" prefHeight="50.0" prefWidth="50.0" text="⏭" />
-                <ProgressBar prefHeight="35.0" prefWidth="200.0" progress="0.0" />
-            </HBox>
-        </bottom>
-    </BorderPane>
-</VBox>
+   </center>
+</BorderPane>

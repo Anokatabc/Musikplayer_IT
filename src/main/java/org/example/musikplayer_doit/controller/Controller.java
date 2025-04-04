@@ -1,27 +1,34 @@
 package org.example.musikplayer_doit.controller;
 //test 12356
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
-import javafx.concurrent.WorkerStateEvent;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
-import javafx.stage.Window;
 import javafx.util.Callback;
 import org.example.musikplayer_doit.model.Song;
-import org.jaudiotagger.audio.AudioFile;
+import org.example.musikplayer_doit.services.ContextMenuService;
+
+import org.example.musikplayer_doit.services.TreeViewBuilderService;
 
 import java.io.File;
-import java.io.FilenameFilter;
+
+///fragen: on-Click-Methode: detecten wenn ins Leere geklickt. Generell Parameter/Umstände beim Klick berücksichtigen,
+/// anstatt nur eine feste Methode auszulösen. Oder ist das automatisch der Fall?
+///
+
 
 
 public class Controller {
 
     MediaPlayer player;
+
 
     @FXML
     private TreeView<File> folderTreeView;
@@ -42,17 +49,26 @@ public class Controller {
 
     public Song selectedSong;
     public MediaPlayer currentSong;
+    ContextMenuService contextMenuService;
+    TreeViewBuilderService treeViewBuilderService;
 
 
     public ObservableList<Song> centerList = FXCollections.observableArrayList();
     public ObservableList<Song> playingList = FXCollections.observableArrayList();
 
+//done: initialize() abspecken (auslagern)
+    public void initialize() {
+        initializeTreeView();
+        applyCellFactory();
+        //MouseEventService mouseEventService;
+        centerTableView.requestFocus();
+    }
+
     // - - - - - - - - - - - - - - - - - - - - - TreeViewController - - - - - - - - - - - - - - - - - - - - - - - - -
 
     // Multithreading: https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ForkJoinPool.html
 
-    public void initialize() {
-// - - - - - - - - - - - Initialisierung TreeView, Task Erstellung - - - - - - - - - - - - - - -
+    public void initializeTreeView(){
         File rootFile = new File("D:/");
         TreeItem<File> rootItem = new TreeItem<>(rootFile);
         folderTreeView.setRoot(rootItem);
@@ -72,40 +88,24 @@ public class Controller {
         //        });
         task.setOnSucceeded(_ -> System.out.println("Finished loading directories!"));
         new Thread(task).start();
-// _  ist event - Langschreibweise:
-//        task.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
-//            @Override
-//            public void handle(WorkerStateEvent workerStateEvent) {
-//                System.out.println("Finished loading directories no Lambda!");
-//            }
-//        });
+    }
 
-        /*
-         * public returnType:TreeCell<Type> call(TreeView<Type> parameterName) {
-         * return new TreeCell<>() { anonymous class
-         * @Override from TreeCell superclass
-         * protected void updateItem(Type item, boolean empty) { protected accessible package-wide and subclasses
-         * super.updateItem(item, empty); call superclass method and pass new parameters
-         *
-         * */
-//        public | TreeCell<File> | call | (TreeView<File> treeView) | { // beginning of code block
-//        // Create and return a new TreeCell with a custom updateItem method
-//        return new TreeCell<>() {
-//            @Override
-//            protected void updateItem(File item, boolean empty) {
-//                // Call the superclass's updateItem method
-//                super.updateItem(item, empty);
-//                // Set the text of the cell based on the item
-//                if (empty || item == null) {
-//                    setText(null);
-//                } else {
-//                    setText(item.getName());
-//                }
-//            }
-//        };
-//} // end of code block
+    private void createTree (File file, TreeItem<File> parentItem){
+        File[] files = file.listFiles(File::isDirectory);
+        if (files != null) {
+            for (var f : files) {
+                //infer filetype <>
+                TreeItem<File> item = new TreeItem<>(f);
+                parentItem.getChildren().add(item);
+                createTree(f, item);
+            }
+            //folderTreeView.setCellFactory(new Callback<TreeView<File>, TreeCell<File>>() {
+        }
+    }
 
-//normal                                                                                       setCellFactory (...everything below
+    //done: TreeItems sollen nur nach Ordnern, nicht komplettem Pfad benannt sein.
+    public void applyCellFactory() {
+        //normal                                                                                       setCellFactory (...everything below
         folderTreeView.setCellFactory(new Callback<TreeView<File>, TreeCell<File>>() { //Callback<>() ((functional interface)) {...
             @Override
             public TreeCell<File> call(TreeView<File> treeView) { //public TreeCell<File> call (TreeView<File> treeView) {...
@@ -124,7 +124,9 @@ public class Controller {
                 };
             }
         });
+    }
 
+    //Cellfactory customizes rendering of cells in a ListView, TableView, TreeView
 
 //lambda
 //        folderTreeView.setCellFactory(treeView -> new TreeCell<>() {
@@ -138,21 +140,48 @@ public class Controller {
 //                }
 //            }
 //        });
-    }
 
-    private void createTree (File file, TreeItem<File> parentItem){
-        File[] files = file.listFiles(File::isDirectory);
-        if (files != null) {
-            for (var f : files) {
-                //infer filetype <>
-                TreeItem<File> item = new TreeItem<>(f);
-                parentItem.getChildren().add(item);
-                createTree(f, item);
-            }
-            //folderTreeView.setCellFactory(new Callback<TreeView<File>, TreeCell<File>>() {
-        }
-    }
-    //Cellfactory customizes rendering of cells in a ListView, TableView, TreeView
+
+
+
+// - - - - - - - - - - - Initialisierung TreeView, Task Erstellung - - - - - - - - - - - - - - -
+
+// _  ist event - Langschreibweise:
+//        task.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
+//            @Override
+//            public void handle(WorkerStateEvent workerStateEvent) {
+//                System.out.println("Finished loading directories no Lambda!");
+//            }
+//        });
+
+            /*
+             * public returnType:TreeCell<Type> call(TreeView<Type> parameterName) {
+             * return new TreeCell<>() { anonymous class
+             * @Override from TreeCell superclass
+             * protected void updateItem(Type item, boolean empty) { protected accessible package-wide and subclasses
+             * super.updateItem(item, empty); call superclass method and pass new parameters
+             *
+             * */
+//        public | TreeCell<File> | call | (TreeView<File> treeView) | { // beginning of code block
+//        // Create and return a new TreeCell with a custom updateItem method
+//        return new TreeCell<>() {
+//            @Override
+//            protected void updateItem(File item, boolean empty) {
+//                // Call the superclass's updateItem method
+//                super.updateItem(item, empty);
+//                // Set the text of the cell based on the item
+//                if (empty || item == null) {
+//                    setText(null);
+//                } else {
+//                    setText(item.getName());
+//                }
+//            }
+//        };
+//} // end of code block
+
+
+
+
 
     /*
     public void initialize() {
@@ -184,6 +213,9 @@ public class Controller {
 
 // - - - - - - - - - - - - - - - - - - - - - PlaybackController - - - - - - - - - - - - - - - - - - - - - - - - -
 
+    //todo: play method respond to focus instead of selection
+    //todo: play method respond to double click and enter press on selection
+
     @FXML
     private void clickPlay() {
         //String uriString = new File("D:\\Musikmainaug2019\\Aku no Hana\\\uD83D\uDC40 Zankyou no Hana.mp3").toURI().toString();
@@ -191,12 +223,20 @@ public class Controller {
             System.out.println("No song selected.");
             return;
         }
-
+///A Scene in JavaFX represents the content of a stage (window). It is a container for all the visual elements
         //todo: morph play symbol into pause symbol during playback
 //currentSong = player;
 //player = new MediaPlayer(new Media(new File (selectedSong.getPath()).toURI().toString()));
-        if (player == null) {
+        if (player == null||player.getStatus() == MediaPlayer.Status.STOPPED) {
 
+//if (player == null) {
+//        player = new MediaPlayer(new Media(new File(selectedSong.getPath()).toURI().toString()));
+//    }
+//
+//    MediaPlayer.Status status = player.getStatus();
+//    if (status == MediaPlayer.Status.STOPPED) {
+//        player = new MediaPlayer(new Media(new File(selectedSong.getPath()).toURI().toString()));
+//    }
             player = new MediaPlayer(new Media(new File (selectedSong.getPath()).toURI().toString()));
             if(selectedSong != null) {
                 player.play();
@@ -205,7 +245,7 @@ public class Controller {
             }
         } else {
             MediaPlayer.Status status = player.getStatus();
-            if (status == MediaPlayer.Status.PAUSED || status == MediaPlayer.Status.STOPPED) {
+            if (status == MediaPlayer.Status.PAUSED) {
                 player.play();
                 System.out.println("Resuming playback");
             } else if (status == MediaPlayer.Status.PLAYING) {
@@ -234,45 +274,62 @@ public class Controller {
     }
 
 
-// - - - - - - - - - - - - - - - - - - - - - TreeViewSelectionController - - - - - - - - - - - - - - - - - - - - - - - - -
+    // - - - - - - - - - - - - - - - - - - - - - TreeViewSelectionController - - - - - - - - - - - - - - - - - - - - - - - - -
 //done: Nach mp3 Dateien filtern, möglichst vor dem ersten Ladeprozess
 //done: Dateipfade im TreeView auf Ordnernamen reduzieren Cellfactory?
 //done: Dateipfade in Titelspalte auf Dateinamen reduzieren Cellfactory? Cut/Trim Methode?
+
     @FXML
-    private void selectTreeItem() {
-        TreeItem<File> item = folderTreeView.getSelectionModel().getSelectedItem();
-        //Song song = centerTableView.getSelectionModel().getSelectedItem();
-        System.out.println();
-//        if (folderTreeView.getSelectionModel().getSelectedItem() != item){
+    private void selectTreeItem(MouseEvent event) {
+
+        // Determine if the click was on a TreeCell
+        Node clickedNode = event.getPickResult().getIntersectedNode();
+        while (clickedNode != null && !(clickedNode instanceof TreeCell<?>)) {
+            clickedNode = clickedNode.getParent();
+        }
+
+        // If no TreeCell was found, clear the selection and return.
+        if (clickedNode == null) {
+            folderTreeView.getSelectionModel().clearSelection();
+            // Optionally, clear the TableView as well.
             centerList.clear();
-//        }
+            centerTableView.setItems(centerList);
+            return;
+        }
+
+        // At this point, a valid TreeCell was clicked.
+        TreeItem<File> item = folderTreeView.getSelectionModel().getSelectedItem();
+
+        // Clear previous list before loading new items
+        centerList.clear();
+
         if (item != null) {
             File data = item.getValue();
-            System.out.println("Selected: "+data);
-            if (data.isDirectory()){
-                //listFiles akzeptiert in () einen FileFilter mit der Signatur (File, String)
-                File[] files = data.listFiles(
-                        (_, str) -> str.toLowerCase().endsWith(".mp3")
-                        //new FilenameFilter(){
-                        //@Override
-                        //public boolean accept(File dir, String name) {
-                        //  return name.toLowerCase().endsWith(".mp3");
-                        //}});
-                );
-                //assert files != null;
+            System.out.println("Selected: " + data);
+
+            if (data.isDirectory()) {
+                // List only .mp3 files in the directory.
+                File[] files = data.listFiles((_, str) -> str.toLowerCase().endsWith(".mp3"));
                 if (files != null) {
-                    for (var f : files) {
+                    for (File f : files) {
+                        // Assume Song has a constructor that accepts the file path.
                         Song song = new Song(f.getAbsolutePath(), null);
                         centerList.add(song);
                     }
                 }
-
+            } else {
+                System.out.println("Not a directory");
             }
-            centerTableView.setItems(centerList);
-            titleColumn.setCellValueFactory(new PropertyValueFactory<>("title"));
-            pathColumn.setCellValueFactory(new PropertyValueFactory<>("path"));
+        } else {
+            System.out.println("Invalid selection");
         }
+
+        // Update the TableView with the new list.
+        centerTableView.setItems(centerList);
+        titleColumn.setCellValueFactory(new PropertyValueFactory<>("title"));
+        pathColumn.setCellValueFactory(new PropertyValueFactory<>("path"));
     }
+
 
 
     // - - - - - - - - - - - - - - - - - - - - - TableViewSelectionController - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -280,30 +337,116 @@ public class Controller {
     //TreeItem<File> item = folderTreeView.getSelectionModel().getSelectedItem();
 
 
-// Song song = new Song(f.getAbsolutePath());
-//                        centerList.add(song);
+    // Song song = new Song(f.getAbsolutePath());
+//                        centerList.add(song);2
+
+    private void checkValidTableItem(MouseEvent event) {
+        // Set an event handler for mouse press events on the centerTableView
+
+    }
+
+    //@FXML
+    //private void selectTableItem(MouseEvent event) {
+    //    Node clickedNode = event.getPickResult().getIntersectedNode();
+    //    while (clickedNode != null && !(clickedNode instanceof TableRow<?>)) {
+    //        clickedNode = clickedNode.getParent();
+    //    }
+    //
+    //    // If no TableRow was found, or if the found row is empty, clear the selection and return.
+    //    if (clickedNode == null || ((TableRow<?>) clickedNode).isEmpty()) {
+    //        centerTableView.getSelectionModel().clearSelection();
+    //        return;
+    //    }
+    //
+    //    // At this point, a valid TableRow with a Song object was clicked.
+    //    Song song = centerTableView.getSelectionModel().getSelectedItem();
+    //    if (song != null) {
+    //        System.out.println("Selected: " + song.getTitle());
+    //        selectedSong = song;
+    //        playingList.add(song);
+    //        playingTableView.setItems(playingList);
+    //        queueTitleColumn.setCellValueFactory(new PropertyValueFactory<>("title"));
+    //    }
+    //}
     @FXML
     private void selectTableItem() {
+        centerTableView.setOnMousePressed(event -> {
+           if (centerTableView.getSelectionModel().getSelectedItem() != null) {
+                Song clickedItem = centerTableView.getSelectionModel().getSelectedItem();
+                int index = centerTableView.getSelectionModel().getSelectedIndex();
+                String content = clickedItem.toString();
+                //int index = centerTableView.getSelectionModel().getSelectedIndex();
+                for (Song i : centerList) {
+                    if (i.toString().equals(content)) {
+                        System.out.println("i: " + i);
+                        System.out.println("content: " + content);
+                        break;
+                    }
+                }
+           }
+            Platform.runLater(new Runnable() {
+                @Override
+                public void run() {
+                    if (centerTableView.getSelectionModel().getSelectedIndex() > -1) {
+                        int index = centerTableView.getSelectionModel().getSelectedIndex();
+                        centerTableView.requestFocus();
+
+                        centerTableView.getSelectionModel().select(index);
+                        centerTableView.getFocusModel().focus(index);
+                        System.out.println("focused Index " + index + " in centerTableView");
+                    }
+                    if (centerTableView.getSelectionModel().getSelectedIndex() == -1){
+                        centerTableView.getSelectionModel().clearSelection();
+                    }
+                }
+            });
+
+//            TableRow<?> row = null;
+//
+//            // Traverse up the node hierarchy to find the TableRow
+//            while (clickedNode != null) {
+//                if (clickedNode instanceof TableRow) {
+//                    row = (TableRow<?>) clickedNode;
+//                    System.out.println(((TableRow<?>) clickedNode).getItem()+"clickedNode");
+//                    System.out.println(row.getItem()+"row");
+//                    break; // Exit the loop once a TableRow is found
+//
+//                }
+//                clickedNode = clickedNode.getParent(); // Move to the parent node
+//            }
+//
+//            // If no TableRow was found, or if the found row is empty, clear the selection
+//            if (row == null || row.getItem() == null) {
+//                centerTableView.getSelectionModel().clearSelection();
+//            }
+//            return;
+        });
+
         Song song = centerTableView.getSelectionModel().getSelectedItem();
+        if (song != null){
         System.out.println("Selected: "+song.getTitle());
         selectedSong = centerTableView.getSelectionModel().getSelectedItem();
-        playingList.add(song);
+
         playingTableView.setItems(playingList);
         queueTitleColumn.setCellValueFactory(new PropertyValueFactory<>("title"));
+        }
+
+//todo: set focus to selection. override focus if playlist is clicked.
 
 
 
     }
 
     @FXML
-    private void showCenterContextMenu() {
+    private void showCenterContextMenu(MouseEvent event) {
+        contextMenuService.displayContextMenu(event);
         centerTableView.setOnContextMenuRequested(e -> {
-        ContextMenu contextmenu = new ContextMenu();
-                });
+            ContextMenu contextmenu = new ContextMenu();
+        });
 
 
-                //e ->
-                //.show(e.getScreenX(), e.getScreenY()));
+        //e ->
+        //.show(e.getScreenX(), e.getScreenY()));
     }
 
 
@@ -351,7 +494,7 @@ public class Controller {
 //                centerList.addAll(files);
 //            }
 //        }
-    }
+}
 
 //    private ArrayList<Song> filesToTableView(ArrayList<File> file){
 //
@@ -519,4 +662,3 @@ private ExecutorService executorService;
 }
 
 */
-
