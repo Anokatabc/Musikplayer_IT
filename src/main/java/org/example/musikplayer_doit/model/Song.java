@@ -7,6 +7,11 @@ public class Song {
 
 //Interpol Projekt anscheuan für ObservableList
 
+    //private Map<String, File/Song?> metadataCache = new HashMap<>();
+    //todo: class Cache oder im Model?
+    //public void addToCache(){}
+    //public void getFromCache(){}
+    //public boolean isInCache(){}
     private String title;
     private File file;
     private String path;
