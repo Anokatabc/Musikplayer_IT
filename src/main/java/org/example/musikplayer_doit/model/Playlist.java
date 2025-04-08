@@ -4,12 +4,12 @@ package org.example.musikplayer_doit.model;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
-
+//gelernt: innerhalb eines Packages können alle Klassen auf "einanders" Membervariablen zugreifen.
 public class Playlist  {
 
     private ObservableList<Song> queue;
 
-    public Playlist (ObservableList<Song> queue){
+    public Playlist (){
         this.queue = FXCollections.observableArrayList();
     }
 
@@ -29,4 +29,6 @@ public class Playlist  {
     public void addSong(Song song){
         queue.add(song);
     }
+
+
 }
