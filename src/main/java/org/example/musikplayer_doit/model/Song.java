@@ -1,5 +1,10 @@
 package org.example.musikplayer_doit.model;
 
+import org.jaudiotagger.audio.AudioFile;
+import org.jaudiotagger.audio.AudioFileIO;
+import org.jaudiotagger.tag.FieldKey;
+import org.jaudiotagger.tag.Tag;
+
 import java.io.File;
 import java.util.Map;
 
@@ -35,10 +40,25 @@ public class Song {
 //        this.file = file;
 //    }
 
+    public void loadMetadata(){
+        try {
+            AudioFile audioFile = AudioFileIO.read(file);
+            Tag tag = audioFile.getTag();
+            if (tag != null){
+                metadata.put("Title", tag.getFirst(FieldKey.TITLE));
+                metadata.put("Artist", tag.getFirst(FieldKey.ARTIST));
+                metadata.put("Album", tag.getFirst(FieldKey.ALBUM));
+                metadata.put("Year", tag.getFirst(FieldKey.YEAR));
+                metadata.put("Genre", tag.getFirst(FieldKey.GENRE));
+            }
+        } catch (Exception e) {
+            System.err.println("Error reading metadata for file: "+e.getMessage());
+        }
+    }
+
     public String getTitle() {
         return title;
     }
-
 
     public String getPath() {
         return path;

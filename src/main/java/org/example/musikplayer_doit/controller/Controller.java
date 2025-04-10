@@ -1,5 +1,19 @@
+//done: delete listener -> delete song from queue
+//todo last today: message Craig, describe app and ask in what way he might be able to help. first think about metadata model storage because this is significant.
+//todo after: implementation jaudiotagger, read metadata
+// -store metadata in Map (file? archive?)
+// -comprehend TableColumn method - TableRowCellFactory w/e?
+// -apply metadata to TableColumns
+// -choose a handful of relevant metadata to finish out the base player
+// do: File object or Path to song file to read
+// AudioFileIO.read(file)
+// error handling
+// audioFile.getTag().getFirst(FieldKey.TITLE) to get specific fields
+// use absolute file path. Alternatively use hash to identify file uniquely
+//todo likely last: design and implement SQLite database for "caching" beyond runtime.
+// -refine and enhance implementation: design efficiency and safety, call/update/synchronization
 package org.example.musikplayer_doit.controller;
-//test 1234561246
+//test 13
 // import javafx.application.Platform;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -21,16 +35,18 @@ import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.util.Callback;
 import javafx.util.Duration;
+import org.example.musikplayer_doit.model.Metadata;
 import org.example.musikplayer_doit.model.Playlist;
 import org.example.musikplayer_doit.model.Song;
 import org.example.musikplayer_doit.services.ContextMenuService;
 
-import org.example.musikplayer_doit.services.FolderScanTask;
 import org.example.musikplayer_doit.services.TreeViewBuilderService;
+import org.jaudiotagger.tag.Tag;
 
 import java.io.File;
-import java.util.HashMap;
-import java.util.concurrent.ForkJoinPool;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 //todo: user option to set root folder
 
@@ -77,7 +93,7 @@ public class Controller {
     public Song currentSong;
     ContextMenuService contextMenuService;
     TreeViewBuilderService treeViewBuilderService;
-    FolderScanTask folderScanTask;
+
 
 
 
@@ -261,15 +277,20 @@ private long startTime;
     private void createTree(File file, TreeItem<File> parentItem) {
         File[] files = file.listFiles(File::isDirectory);
         if (files != null) {
+            List<TreeItem<File>> batch = new ArrayList<>();
             for (var f : files) {
                 //infer filetype <>
                 loopCount += 1;
                 System.out.println("Scanned: "+loopCount+" of x");
                 TreeItem<File> item = new TreeItem<>(f);
-                parentItem.getChildren().add(item);
+                batch.add(item);
                 createTree(f, item);
             }
 
+            //Platform.runLater(() -> {
+                parentItem.getChildren().addAll(batch);
+                //folderTreeView.layout();
+           // }); // Batch-Update
             //folderTreeView.setCellFactory(new Callback<TreeView<File>, TreeCell<File>>() {
         }
     }
@@ -364,13 +385,16 @@ private long startTime;
     //done: TreeItems sollen nur nach Ordnern, nicht komplettem Pfad benannt sein.
     public void applyCellFactory() {
         //normal                                                                                       setCellFactory (...everything below
-        folderTreeView.setCellFactory(new Callback<TreeView<File>, TreeCell<File>>() { //Callback<>() ((functional interface)) {...
+        folderTreeView.setCellFactory(new Callback<TreeView<File>, TreeCell<File>>() { // (functional interface)
+            //Callback (P, R){R (output) call (P p(input));}
+            // TreeView<File> is input, TreeCell<File> is output
             @Override
-            public TreeCell<File> call(TreeView<File> treeView) { //public TreeCell<File> call (TreeView<File> treeView) {...
+            public TreeCell<File> call(TreeView<File> treeView) { // call () {...
                 return new TreeCell<>() {   //return new TreeCell<>{...
                     @Override
                     protected void updateItem(File item, boolean empty) { //protected void updateItem(File item, boolean empty) {...
                         super.updateItem(item, empty);
+
 //                        if (empty || item == null) {
 //                            setText(null);
 //                        } else if (getTreeItem().getParent() == null) { //done: Check if getParent only displays root, and much improved code. Saved many thousands of unneeded iterations / checks
@@ -378,7 +402,9 @@ private long startTime;
 //                        } else {
 //                            setText(item.getName());
 //                        }
-                        //oder
+                        // Even with mouseTransparent, rendering continues during:
+                        //Platform.runLater(() -> parentItem.getChildren().addAll(batch));
+                        // Multiple rapid runLater calls can queue overlapping renders
 //    if (empty || item == null) {
 //        setText(null);
 //    } else {
@@ -388,6 +414,10 @@ private long startTime;
 //        } else {
 //            setText(item.getName());
 //
+                        if (empty || item == null) {
+                            setText(null); // Clear the cell if it's empty
+                            setGraphic(null);
+                        }
                         if (!empty && item != null){
                             if (getTreeItem().getParent() == null){
                                 setText("D:/");
@@ -576,13 +606,13 @@ private long startTime;
     }
 
     private void setProgressBar() {
-        if (progressBar.getProgress() > 0){
-            progressBar.setProgress(0);
-        }
         player.currentTimeProperty().addListener((observable, oldValue, newValue) -> {
+            double offset =  0.03; // 3%
             double currentTime = newValue.toSeconds();
             double totalDuration = player.getTotalDuration().toSeconds();
-            double progress = currentTime / totalDuration;
+            //double progress = currentTime / totalDuration;
+            double progress = (currentTime / totalDuration) * (1 - offset) + offset;
+
             progressBar.setProgress(progress);
 
 //hours erstellt 1 3600stel, zählt im Laufe einer Stunde hoch bis 3600
@@ -639,23 +669,42 @@ private long startTime;
         setProgressBar();
         player.setVolume(volumeSlider.getValue());
         transformPlayButton();
+        setCurrentSong();
         styleCurrentSong();
         playerBehavior();
     }
 
-    //todo: Styling funktioniert, aber nicht richtig. Außerdem keine Ahnung
+    //done: Styling funktioniert, aber nicht (nun) richtig
     private void styleCurrentSong(){
-       playingTableView.setRowFactory(rv -> new TableRow<> () {
-           @Override
-           protected void updateItem(Song item, boolean empty) {
-               super.updateItem(item, empty);
-               if (item != null && item.equals(currentSong)) {
-                   setStyle("-fx-font-weight: bold;");
-               } else {
-                   setStyle(""); // Reset style for other rows
-               }
-           }
-       });
+//       playingTableView.setRowFactory(rv -> new TableRow<> () {
+//           @Override
+//           protected void updateItem(Song item, boolean empty) {
+//               super.updateItem(item, empty);
+//               if (item != null && item.equals(currentSong)) {
+//                   setStyle("-fx-font-weight: bold;");
+//               } else {
+//                   setStyle(""); // Reset style for other rows
+//               }
+//           }
+//       });
+        playingTableView.setRowFactory(tv -> new TableRow<>() {
+            @Override
+            protected void updateItem(Song item, boolean empty) {
+                super.updateItem(item, empty);
+                if (item != null && item.equals(currentSong)) {
+                    setStyle("-fx-font-weight: bold;");
+                } else {
+                    setStyle(""); // Reset style for other rows
+                }
+            }
+        });
+//        playingTableView.setRowFactory(new Callback<TableView<Song>, TableRow<Song>>() {
+//            @Override
+//            public TableRow<Song> call(TableView<Song> songTableView) {
+//                return new TableRow<>();
+//            }
+//        });
+
         centerTableView.setRowFactory(tv -> new TableRow<>() {
             @Override
             protected void updateItem(Song item, boolean empty) {
@@ -670,8 +719,8 @@ private long startTime;
 
     }
 
-    //todo: play method respond to focus instead of selection
-    //todo: play method respond to double click and enter press on selection
+    //done: play method respond to focus instead of selection
+    //done: play method respond to double click and enter press on selection
 
     private void playerBehavior() {
         //player.setOnEndOfMedia(this::playNextOrStop);
@@ -684,7 +733,7 @@ private long startTime;
         player.setOnEndOfMedia(new Runnable() {
             @Override
             public void run() {
-                System.out.println("endOfMedia triggered. this time by playerBehavior();");
+                System.out.println("endOfMedia triggered by method playerBehavior();");
                 progressBar.setProgress(0);
                 playNextOrStop();
             }
@@ -697,7 +746,7 @@ private long startTime;
     //todo: kleine Popups bei Mouseover: ProgressBar Minute:Sekunde, über TableColumn gesamter Inhalt, ebenso über TreeItem.
 
     ///A Scene in JavaFX represents the content of a stage (window). It is a container for all the visual elements
-    //todo: morph play symbol into pause symbol during playback
+    //done: morph play symbol into pause symbol during playback
     private void transformPlayButton(){
         if (player == null){
             return;
@@ -705,10 +754,10 @@ private long startTime;
         }
         player.statusProperty().addListener((observable, oldStatus, newStatus) -> {
             if (newStatus == MediaPlayer.Status.PLAYING){
-                playButtonLabel.setText("\u23F8"); // ⏸
+                playButtonLabel.setText("⏸"); // \u23F8
             }
             if (newStatus == MediaPlayer.Status.STOPPED || newStatus == MediaPlayer.Status.PAUSED){
-                playButtonLabel.setText("▶"); // ▶
+                playButtonLabel.setText("▶"); // \u25B6
             }
         });
 
@@ -738,6 +787,7 @@ private long startTime;
         }
         selectedSong = centerTableView.getSelectionModel().getSelectedItem();
         playSelection();
+        System.out.println("Metadata: "+currentSong.getMetadata());
         //        if (player == null||player.getStatus() == MediaPlayer.Status.STOPPED) {
 //
 //            player = new MediaPlayer(new Media(new File(selectedSong.getPath()).toURI().toString()));
@@ -784,10 +834,12 @@ private long startTime;
     private void addToQueue(){
         selectedSong = centerTableView.getSelectionModel().getSelectedItem();
         queue.addSong(selectedSong);
+        System.out.println("Song successfully added to queue.");
     }
     private void deleteSongFromQueue(){
         selectedSong = playingTableView.getSelectionModel().getSelectedItem();
         queue.removeSong(selectedSong);
+        System.out.println("Song successfully deleted from queue.");
     }
 
     @FXML
@@ -795,20 +847,29 @@ private long startTime;
         if (queue == null) {
             System.out.println("No song in Playlist.");
             return;
+        }
+        if (player == null){
+            System.out.println("No player found.");
+            return;
+        }
+        if (player.getStatus() == MediaPlayer.Status.PLAYING){
+            player.pause();
+            System.out.println("Paused playback of "+currentSong);
         } else {
-            System.out.println("srdsrsdrsr");
+            player.play();
+            System.out.println("Playing: "+currentSong);
         }
 
         //    return new Media(new File(song.getPath()).toURI().toString());
-
-        ObservableList<Song> currentQueue = queue.getQueue();
-        if (player == null ||player.getStatus() == MediaPlayer.Status.STOPPED) {
-            var media = songToMedia(currentSong);
-            player = new MediaPlayer(media);
-        }
-        //player.getStatus() == MediaPlayer.Status.PAUSED||player.getStatus() == MediaPlayer.Status.STALLED
-        player.play();
-        initiatePlay();
+//
+//        ObservableList<Song> currentQueue = queue.getQueue();
+//        if (player == null ||player.getStatus() == MediaPlayer.Status.STOPPED) {
+//            var media = songToMedia(currentSong);
+//            player = new MediaPlayer(media);
+//        }
+//        //player.getStatus() == MediaPlayer.Status.PAUSED||player.getStatus() == MediaPlayer.Status.STALLED
+//        player.play();
+//        initiatePlay();
     }
 
     private void handleDoubleClick (MouseEvent event){
@@ -842,6 +903,8 @@ private long startTime;
     private Song findSongByPath(ObservableList<Song> songList, String path){
         for (var s : songList){
             if (s.getPath().equals(path)){
+                System.out.println("return statement of findSongByPath(): "+s);
+
                 return s;
             }
         }
@@ -849,6 +912,10 @@ private long startTime;
     }
 //todo: test and fix with headphones
     private void playPrevious(){
+        if (player == null) {
+            System.out.println("No player instance found.");
+            return;
+        }
         ObservableList<Song> currentQueue = queue.getQueue();
         int currentSongIndex = currentQueue.indexOf(currentSong);
         Song previousSong;
@@ -861,25 +928,35 @@ private long startTime;
         }
     }
 
-    //potentiell auslagern in "private Song determineCurrentSong(ObservableList<Song> list)?"
-    private void playNextOrStop(){
-        System.out.println("Method call: playNextOrStop.");
+    private void setCurrentSong(){
+        System.out.println("Method called: setCurrentSong (by initiatePlay())");
         ObservableList<Song> currentQueue = queue.getQueue();
         String currentMediaSource = player.getMedia().getSource();
         System.out.println("currentMediaSource: "+currentMediaSource);
         String sourceToPath = parseSourceToPath(currentMediaSource);
         System.out.println("sourceToPath: "+sourceToPath);
         currentSong = findSongByPath(currentQueue, sourceToPath);
+        System.err.println("Current song as determined by setCurrentSong: "+sourceToPath);
+    }
+
+    //done: potentiell auslagern in "private Song determineCurrentSong(ObservableList<Song> list)?"
+    private void playNextOrStop() {
+        System.out.println("Method call: playNextOrStop.");
+        if (player == null) {
+            System.out.println("No player found.");
+            return;
+        }
+
+        ObservableList<Song> currentQueue = queue.getQueue();
         int currentSongIndex = currentQueue.indexOf(currentSong);
         Song nextSong;
-
-        if (currentSongIndex == currentQueue.size()-1){
+        if (currentSongIndex == currentQueue.size() - 1) {
             player.stop();
             System.out.println("No more songs in current queue, playback stopped.");
             return;
         } else {
-            nextSong = currentQueue.get(currentSongIndex+1);
-            System.out.println("Setting next song: "+nextSong);
+            nextSong = currentQueue.get(currentSongIndex + 1);
+            System.out.println("Setting next song: " + nextSong);
         }
         if (nextSong != null) {
             if (currentSong != null) {
@@ -888,9 +965,10 @@ private long startTime;
                 player = new MediaPlayer(nextPlay);
                 player.play();
                 initiatePlay();
-                System.out.println("Playing next song in playlist: "+nextPlay.getSource());
+                System.out.println("Playing next song in playlist: " + nextPlay.getSource());
             }
         }
+
     }
 
     private Media songToMedia(Song song){
@@ -912,7 +990,7 @@ private long startTime;
 
 
     //todo: use/create update playlist methods
-    //todo: enable skipping to parts of playlist for playback
+    //done: enable skipping to parts of playlist for playback
     //partially done: required steps: instantiate ObservableList in method constructor. Instantiate Playlist in initialize method. update variable names and call Playlist methods.
     @FXML
     private void clickPrevious(){
@@ -981,7 +1059,8 @@ private long startTime;
     @FXML
     private void selectTreeItem(MouseEvent event) {
 
-        // Determine if the click was on a TreeCell
+        //todo: comprehend
+        //Determine if the click was on a TreeCell
         Node clickedNode = event.getPickResult().getIntersectedNode();
         while (clickedNode != null && !(clickedNode instanceof TreeCell<?>)) {
             clickedNode = clickedNode.getParent();
@@ -1029,6 +1108,11 @@ private long startTime;
         pathColumn.setCellValueFactory(new PropertyValueFactory<>("path"));
     }
 
+    public Map<String, Object> scanMetadata(Song file){
+        Tag metadataItem;
+        Map<String, Object> metadataMap = null;
+        return metadataMap;
+    }
 
 
     // - - - - - - - - - - - - - - - - - - - - - TableViewSelectionController - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1419,19 +1503,6 @@ public class MediaPlayerSingleton {
             });
         }
         return instance;
-    }
-}
-public class Controller {
-    private MediaPlayer player;
-
-    public Controller() {
-        this.player = MediaPlayerSingleton.getInstance();
-    }
-
-    public void handleVolumeSlider(double volume) {
-        if (player != null) {
-            player.setVolume(volume / 100.0); // Assuming the slider value is between 0 and 100
-        }
     }
 }
 */
