@@ -73,7 +73,7 @@
       <SplitPane dividerPositions="0.22705314009661837, 0.8367149758454107" prefHeight="160.0" prefWidth="200.0" BorderPane.alignment="CENTER">
         <items>
             <TreeView fx:id="folderTreeView" minWidth="10.0" onMouseClicked="#selectTreeItem" prefHeight="580.0" prefWidth="381.0" />
-            <TableView fx:id="centerTableView" minWidth="10.0" onMouseClicked="#selectTableItem" prefHeight="580.0" prefWidth="187.0">
+            <TableView fx:id="centerTableView" minWidth="10.0" prefHeight="580.0" prefWidth="187.0">
                <columns>
                   <TableColumn fx:id="titleColumn" prefWidth="131.0" text="Title" />
                   <TableColumn fx:id="lengthColumn" prefWidth="131.0" text="Length" />

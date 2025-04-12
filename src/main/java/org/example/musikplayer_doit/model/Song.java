@@ -40,11 +40,13 @@ public class Song {
 //        this.file = file;
 //    }
 
-    public void loadMetadata(){
+    public void loadMetadata(Song song){
         try {
             AudioFile audioFile = AudioFileIO.read(file);
             Tag tag = audioFile.getTag();
             if (tag != null){
+
+                //tag.getFirst(FieldKey.TITLE) == null ? return : metadata.put("Title", tag.getFirst(FieldKey.TITLE));
                 metadata.put("Title", tag.getFirst(FieldKey.TITLE));
                 metadata.put("Artist", tag.getFirst(FieldKey.ARTIST));
                 metadata.put("Album", tag.getFirst(FieldKey.ALBUM));
