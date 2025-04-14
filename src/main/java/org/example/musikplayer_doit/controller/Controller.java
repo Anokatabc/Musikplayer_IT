@@ -101,7 +101,7 @@ import java.util.Map;
 
 public class Controller {
 
-    MediaPlayer player;
+    private MediaPlayer player;
 
     @FXML
     private TreeView<File> folderTreeView;
@@ -244,6 +244,12 @@ private long startTime;
         folderTreeView.setMouseTransparent(true);
         folderTreeView.setOpacity(0.5);
         File rootFile = new File("D:/");
+        if(rootFile.listFiles() != null){
+            System.out.println("Loading directories from D:/...");
+        } else {
+            System.out.println("no directories found");
+            return;
+        }
         TreeItem<File> rootItem = new TreeItem<>(rootFile);
         folderTreeView.setRoot(rootItem);
         // ForkJoinPool für parallele Verarbeitung
@@ -313,7 +319,11 @@ private long startTime;
     private void createTree(File file, TreeItem<File> parentItem){
 
         File[] files = file.listFiles(File::isDirectory);
-        if (files != null){
+
+        if (files == null){
+            System.out.println("No files found, cannot build Tree");
+            return;
+        }
             for (var f : files){
                 if (containsMP3Files(f) && f.isDirectory()){
                     TreeItem<File> treeItem = new TreeItem<>(f);
@@ -323,7 +333,7 @@ private long startTime;
                     System.out.println("Scanned: "+loopCount+" of x");
                 }
             }
-        }
+
     }
 
 //    private void createTree(File file, TreeItem<File> parentItem) {
@@ -612,7 +622,7 @@ private long startTime;
         //}));
 
         if (player == null){
-            System.out.println("No player instance found, cannot set volume. Will be updated on playback within 0.05 margin of error.");
+            System.out.println("No player instance found, cannot set volume. Will be updated on playback within 0.05 margin of deviation.");
         }
         volumeSlider.addEventFilter(ScrollEvent.SCROLL, scrollEvent -> {
             double delta = scrollEvent.getDeltaY() > 0 ? 0.05 : -0.05;
@@ -657,12 +667,7 @@ private long startTime;
                     });
                 }
             }
-
         });
-
-
-
-
     }
 
     private void setProgressBar() {
@@ -1101,6 +1106,11 @@ private void playPrevious() {
     }
 
     //done: potentiell auslagern in "private Song determineCurrentSong(ObservableList<Song> list)?"
+    //todo: Speichere einfach aktuellen Index von currentSong und rufe ihn ab. Falls Index > queue.size, spiel das letzte Lied.
+    //todo: für playprevious: selbe Logik, aber -1, und falls Index > queue.size, spiel das vorletzte Lied.
+    // next: falls queue == null; stop und dispose.
+    // previous: falls queue == null, aber player != null, progress auf 0 setzen. Falls player == null, return.
+    //todo: falls nicht schon vorhanden, automatisches Playerverhalten. onEndOfMedia: schauen ob Song in Queue, welcher nicht currentSong ist. Wenn ja, playback. Wenn nein, stop (nicht dispose).
     private void playNextOrStop() {
         System.out.println("[[playNextOrStop]]: Method call: playNextOrStop.");
         if (player == null) {

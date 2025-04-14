@@ -85,4 +85,6 @@ public class Song {
     public void printMetadata() {
         System.out.println("Metadata for "+path+": "+metadata);
     }
+//todo: (much later) use getName() + hash value for song construction. If hash already exists, update file path. if not, create new song file with name and hash value. Prevents duplicate entries
+// alternatively: Audio fingerprinting (create additional hash on audio editing(?))
 }
