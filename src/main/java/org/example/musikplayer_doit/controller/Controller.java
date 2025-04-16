@@ -2,8 +2,7 @@
 // oder Platform.isFxApplicationThread()
 
 //done: delete listener -> delete song from queue
-//todo last today: message Craig, describe app and ask in what way he might be able to help. first think about metadata model storage because this is significant.
-//todo after: implementation jaudiotagger, read metadata
+//done: implementation jaudiotagger, read metadata
 // -store metadata in Map (file? archive?)
 // -comprehend TableColumn method - TableRowCellFactory w/e?
 // -apply metadata to TableColumns
@@ -13,10 +12,8 @@
 // error handling
 // audioFile.getTag().getFirst(FieldKey.TITLE) to get specific fields
 // use absolute file path. Alternatively use hash to identify file uniquely
-//todo likely last: design and implement SQLite database for "caching" beyond runtime.
 // -refine and enhance implementation: design efficiency and safety, call/update/synchronization
 
-//todo: conversion testen?
 // import org.jaudiotagger.audio.AudioFile;
 //import org.jaudiotagger.audio.AudioFileIO;
 //import org.jaudiotagger.audio.exceptions.CannotReadException;
@@ -27,40 +24,7 @@
 //
 //import java.io.File;
 //
-//public class ID3TagConverter {
-//
-//    public static void convertID3v1ToID3v2(File[] files) {
-//        for (File file : files) {
-//            try {
-//                AudioFile audioFile = AudioFileIO.read(file);
-//                Tag tag = audioFile.getTag();
-//
-//                if (tag instanceof ID3v1Tag) {
-//                    System.out.println("Converting ID3v1 to ID3v2 for file: " + file.getName());
-//                    ID3v1Tag id3v1Tag = (ID3v1Tag) tag;
-//
-//                    // Erstellen eines neuen ID3v2.4-Tags
-//                    ID3v24Tag id3v2Tag = new ID3v24Tag();
-//                    id3v2Tag.setField(id3v2Tag.createField(ID3v24Tag.ID_ALBUM, id3v1Tag.getFirstAlbum()));
-//                    id3v2Tag.setField(id3v2Tag.createField(ID3v24Tag.ID_ARTIST, id3v1Tag.getFirstArtist()));
-//                    id3v2Tag.setField(id3v2Tag.createField(ID3v24Tag.ID_TITLE, id3v1Tag.getFirstTitle()));
-//                    id3v2Tag.setField(id3v2Tag.createField(ID3v24Tag.ID_YEAR, id3v1Tag.getFirstYear()));
-//                    id3v2Tag.setField(id3v2Tag.createField(ID3v24Tag.ID_GENRE, id3v1Tag.getFirstGenre()));
-//
-//                    // ID3v2-Tag dem AudioFile hinzufügen
-//                    audioFile.setTag(id3v2Tag);
-//                    AudioFileIO.write(audioFile);
-//                }
-//            } catch (CannotReadException e) {
-//                System.err.println("Cannot read file: " + file.getName() + " - " + e.getMessage());
-//            } catch (CannotWriteException e) {
-//                System.err.println("Cannot write to file: " + file.getName() + " - " + e.getMessage());
-//            } catch (Exception e) {
-//                System.err.println("Error processing file: " + file.getName() + " - " + e.getMessage());
-//            }
-//        }
-//    }
-//}
+
 package org.example.musikplayer_doit.controller;
 //test 13
 // import javafx.application.Platform;
@@ -73,14 +37,12 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
-import javafx.concurrent.WorkerStateEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.BorderPane;
@@ -88,6 +50,7 @@ import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.util.Callback;
 import javafx.util.Duration;
+import org.example.musikplayer_doit.model.MP3FileMetadataExtractor;
 import org.example.musikplayer_doit.model.Playlist;
 import org.example.musikplayer_doit.model.Song;
 
@@ -95,6 +58,7 @@ import java.io.File;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.Map;
 
 //todo: user option to set root folder
@@ -109,12 +73,20 @@ public class Controller {
     private TableView<Song> centerTableView;
     @FXML
     private TableView<Song> playingTableView;
+
     @FXML
-    private TableColumn<File, String> titleColumn; //TableColumn<S, T> S=Datentyp von TableView, T=Datentyp in Spalte
+    private TableColumn<Song, String> albumColumn;
     @FXML
-    private TableColumn<File, String> pathColumn;
+    private TableColumn<Song, String> titleColumn; //TableColumn<S, T> S=Datentyp von TableView, T=Datentyp in Spalte
     @FXML
-    private TableColumn<File, String> lengthColumn;
+    private TableColumn<Song, String> pathColumn;
+    @FXML
+    private TableColumn<Song, String> artistColumn;
+
+
+
+    @FXML
+    private TableColumn<Song, String> lengthColumn;
     @FXML
     private TableColumn<Song, String> queueTitleColumn;
     @FXML
@@ -122,9 +94,10 @@ public class Controller {
     @FXML
     private ProgressBar progressBar;
     @FXML
-    private Label barTimer;
+    private TableColumn<Song, String> noColumn;
+
     @FXML
-    private Tooltip barTooltip;
+    private Label barTimer;
     @FXML
     Slider volumeSlider;
     @FXML
@@ -140,10 +113,13 @@ public class Controller {
     private int countingIndex;
     private Song selectedSong;
     private Song currentSong;
+    private boolean autoPlay;
+    MP3FileMetadataExtractor mp3FileMetadataExtractor;
 
     public ObservableList<Song> centerList = FXCollections.observableArrayList();
     //public ObservableList<Song> queue = FXCollections.observableArrayList();
     Playlist queue;
+    private ObservableList<Song> currentQueue;
 
 //mostly done: initialize() abspecken (auslagern)
 
@@ -153,10 +129,12 @@ public class Controller {
         applyCellFactory();
         trackBorderPaneFocus();
         centerTableViewClearHandler();
+        playingTableViewClearHandler();
         initializeVolumeSlider();
         handleVolumeSlider();
         initializeCenterTableViewListener();
         initializePlayingTableViewListener();
+
         //MouseEventService mouseEventService;
         centerTableView.requestFocus();
         //barTimer.setText("00:00");
@@ -173,6 +151,7 @@ public class Controller {
 
 
         queueTitleColumn.setCellValueFactory(new PropertyValueFactory<>("title"));
+        queueLengthColumn.setCellValueFactory(new PropertyValueFactory<>("length"));
         //queueLengthColumn.setCellValueFactory(new PropertyValueFactory<>("songLength"));
 //        playingTableView.setOnMouseClicked(event -> {
 //            if (event.getClickCount() == 2) {
@@ -252,25 +231,7 @@ private long startTime;
         }
         TreeItem<File> rootItem = new TreeItem<>(rootFile);
         folderTreeView.setRoot(rootItem);
-        // ForkJoinPool für parallele Verarbeitung
-//                ForkJoinPool pool = new ForkJoinPool();
-//                pool.invoke(new FolderScanTask(rootFile, rootItem));
 
-        //Anonyme Klasse von Task wird erstellt und instanziiert
-//        Task<Void> initialTask = new Task<>() {
-//            @Override
-//            protected Void call() {
-//                File[] initialFiles = rootFile.listFiles(File::isDirectory);
-//                return null;
-//            }
-//        };
-//        new Thread (initialTask).start();
-//        initialTask.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
-//            @Override
-//            public void handle(WorkerStateEvent workerStateEvent) {
-//                System.out.println("Initial loading completed, result: ");
-//            }
-//        });
         Task<Void> task = new Task<>() {
             @Override
             protected Void call() {
@@ -592,7 +553,7 @@ private long startTime;
 //        button.setTooltip();
     }
 
-
+//Hintergrund: Fokus auf Auswahl behalten...
     private void trackBorderPaneFocus(){
         borderPane.sceneProperty().addListener((observable, oldScene, newScene) -> {
             if (newScene != null) {
@@ -608,7 +569,7 @@ private long startTime;
     //done: Volume Slider responsiv machen. Problem: Scheint nur zwischen 0 und 100 zu wechseln. Lösung: MediaPlayer hat Volume zwischen 0 - 1, Slider 0 - 100.
     //volumeSlider Error Handling mit Null Check
     //todo: Volume Slider stylen ein Stück weit wie ProgressBar.
-    //todo: sicherstellen dass volumeSlider und playerVolume stets synchronisiert sind.
+    //done: sicherstellen dass volumeSlider und playerVolume stets synchronisiert sind.
     @FXML
     private void handleVolumeSlider () {
         //volumeSlider.minProperty().setValue(0);
@@ -643,7 +604,7 @@ private long startTime;
 //        volumeSlider.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
 //
 //        });
-        //todo: idealerweise gar nicht erst Fokus auf VolumeSlider erlauben, und all dies sparen
+        //done: idealerweise gar nicht erst Fokus auf VolumeSlider erlauben, und all dies sparen
             volumeSlider.addEventFilter(MouseEvent.MOUSE_RELEASED, event -> {
             if (previousFocus != null) {
                 previousFocus.requestFocus(); // Setze den Fokus zurück
@@ -717,6 +678,7 @@ private long startTime;
         }
         Media newPlayback = songToMedia(selectedSong);
         player = new MediaPlayer(newPlayback);
+        currentQueue = queue.getQueue();
         System.out.println("Playing after double click or enter press newPlayBack: "+newPlayback+", which is the same as selectedSong.getTitle(): "+selectedSong.getTitle());
         initiatePlay();
         player.play();
@@ -789,17 +751,28 @@ private long startTime;
 //        player.setOnEndOfMedia(() -> {
 //            playNextOrStop();
 //                });
-        if (player == null){
+        autoPlay = true;
+        if (player == null) {
             return;
         }
         player.setOnEndOfMedia(new Runnable() {
             @Override
             public void run() {
-                System.out.println("endOfMedia triggered by method playerBehavior();");
-                progressBar.setProgress(0);
-                playNextOrStop();
+                //if
             }
         });
+        //Autoplay: on
+        player.setOnEndOfMedia(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("endOfMedia triggered by method playerBehavior();");
+                if (autoPlay) {
+                    progressBar.setProgress(0);
+                    playNextOrStop();
+                }
+            }
+        });
+
     }
     //mostly done: clickPlay auslagern / abspecken
     //done: Timer updaten
@@ -842,6 +815,11 @@ private long startTime;
 
     private void handleEnterOrDoubleClickCenterTableView() {
         selectedSong = centerTableView.getSelectionModel().getSelectedItem();
+//        for (var s : centerList){
+//            System.out.println("lookup Metadata: "+s.getAlbum());
+//            System.out.println("lookup Metadata: "+s.getTitle());
+//            System.out.println("lookup Metadata: "+s.getPath());
+//        }
         if (queue != null){
             queue.clearQueue();
         }
@@ -853,8 +831,6 @@ private long startTime;
                 System.out.println("Added: "+song.getTitle());
             }
         }
-
-
         playSelection();
 //        System.out.println("Metadata: "+currentSong.getMetadata());
         //        if (player == null||player.getStatus() == MediaPlayer.Status.STOPPED) {
@@ -899,6 +875,8 @@ private long startTime;
         playSelection();
         initiatePlay();
         //todo: allow multiple selection during ctrl-click, probably redesign method with array for selection
+        // außerdem strg+A für alle auswählen
+
     }
     private void addToQueue(){
         selectedSong = centerTableView.getSelectionModel().getSelectedItem();
@@ -1015,9 +993,9 @@ private long startTime;
 
         return null;
     }
-//todo: test and fix with headphones
+
+//done: test and fix with headphones
 private void playPrevious() {
-    ObservableList<Song> currentQueue = queue.getQueue();
     System.out.println("current queue contains: "+currentQueue);
         if (currentQueue.isEmpty()) {
         System.err.println(">playPrevious: currentQueue is empty.");
@@ -1095,7 +1073,7 @@ private void playPrevious() {
 
         String sourcePath = Paths.get(URI.create(currentMediaSource)).toString();
 
-        ObservableList<Song> currentQueue = queue.getQueue();
+
         currentSong = findSongByPath(currentQueue, sourcePath);
         if (currentSong == null) return;
         System.out.println("[[setCurrentSong]]: currentSong, as calculated based on: " +
@@ -1106,11 +1084,15 @@ private void playPrevious() {
     }
 
     //done: potentiell auslagern in "private Song determineCurrentSong(ObservableList<Song> list)?"
+    //todo: Button für Playlist wiederholen - boolean Instanzvariable? (fragen)
+    //todo: BUtton für Sleep Timer: Mit oder ohne Volumeverringerung über Zeit.
+    //todo: playPrevious: If playback >3?5? Sekunden: seek 0 currentSong (check mediamonkey standard)
     //todo: Speichere einfach aktuellen Index von currentSong und rufe ihn ab. Falls Index > queue.size, spiel das letzte Lied.
     //todo: für playprevious: selbe Logik, aber -1, und falls Index > queue.size, spiel das vorletzte Lied.
     // next: falls queue == null; stop und dispose.
     // previous: falls queue == null, aber player != null, progress auf 0 setzen. Falls player == null, return.
     //todo: falls nicht schon vorhanden, automatisches Playerverhalten. onEndOfMedia: schauen ob Song in Queue, welcher nicht currentSong ist. Wenn ja, playback. Wenn nein, stop (nicht dispose).
+    // fragen: "automatisches player behavior" ist nicht setzbar, oder? ist es richtig, dies mit einer Initialize-Methode bei jeder Playererstellung zu aktualisieren?
     private void playNextOrStop() {
         System.out.println("[[playNextOrStop]]: Method call: playNextOrStop.");
         if (player == null) {
@@ -1118,7 +1100,6 @@ private void playPrevious() {
             return;
         }
 
-        ObservableList<Song> currentQueue = queue.getQueue();
         int currentSongIndex = currentQueue.indexOf(currentSong);
         Song nextSong;
         if (currentSongIndex == currentQueue.size() - 1) {
@@ -1163,7 +1144,7 @@ private void playPrevious() {
     }
 
 
-    //todo: use/create update playlist methods
+    //done: use/create update playlist methods
     //done: enable skipping to parts of playlist for playback
     //partially done: required steps: instantiate ObservableList in method constructor. Instantiate Playlist in initialize method. update variable names and call Playlist methods.
     @FXML
@@ -1181,22 +1162,22 @@ private void playPrevious() {
     // create button and method for "stop after current track", which gets reset after playback stop
     // optionally configurable to not turn off on playback end.
 
-    //todo: set focus on Playlist on click
+    //done: set focus on Playlist on click
 
-    //todo: make TableView and Queue respond to keyboard input.
+    //done: make TableView and Queue respond to keyboard input.
     // Enter: clearList and add entire folder to queue and play // just play.
     // alt+Enter: clearList and add selected song to queue
     // ctrl+Enter: add selected song to queue
     // Delete: Delete file (ask permission) // remove from list.
 
-    //todo: Set new focus on arrow up/down.
+    //todo: Set new focus on arrow up/down. done?
 
     //todo: add further playback altering methods and buttons:
     // randomize playback
     // repeat playback
     // sleep timer
     // potentially advanced functions such as transpose, playback speed, equalizer
-    //todo: drag & drop in queue
+    //todo: drag & drop in and into queue
 
 
     // - - - - - - - - - - - - - - - - - - - - - TreeViewSelectionController - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1232,8 +1213,8 @@ private void playPrevious() {
 
     @FXML
     private void selectTreeItem(MouseEvent event) {
-
         //todo: comprehend
+
         //Determine if the click was on a TreeCell
         Node clickedNode = event.getPickResult().getIntersectedNode();
         while (clickedNode != null && !(clickedNode instanceof TreeCell<?>)) {
@@ -1250,10 +1231,10 @@ private void playPrevious() {
             return;
         }
 
-        // At this point, a valid TreeCell was clicked.
+
         TreeItem<File> selectedItem = folderTreeView.getSelectionModel().getSelectedItem();
 
-        // Clear previous list before loading new items
+
         centerList.clear();
 
         if (selectedItem != null) {
@@ -1274,14 +1255,19 @@ private void playPrevious() {
                 //         fileChooser.getExtensionFilters().addAll(
                 //                 new FileChooser.ExtensionFilter("MP3 Files", "*.mp3")
                 File[] files = folder.listFiles((_file, str) -> str.toLowerCase().endsWith(".mp3"));
+                mp3FileMetadataExtractor = new MP3FileMetadataExtractor();
                 if (files != null) {
-                    for (var f : files) {
-                        Song song = new Song(f.getAbsolutePath(), null);
-                        System.out.println("Absolute Path used in Song construction="+f.getAbsolutePath());
-                        centerList.add(song);
-                        if (!f.canWrite()){
-                            System.out.println("Cannot write File "+f);
-                        }
+                    centerList.clear();
+                    Song[] songArray = new Song[files.length];
+                    for (int i = 0; i < files.length; i++) {
+                        songArray[i] = new Song(files[i].getAbsolutePath(), new HashMap<>());
+                        System.out.println("Absolute Path used in Song construction=" + files[i].getAbsolutePath() + ", along with empty HashMap, to be filled later");
+                    }
+                    mp3FileMetadataExtractor.extractTagFromMp3(songArray);
+
+                    for (var s : songArray) {
+                        centerList.add(s);
+                        System.out.println("Added song to centerList: " + s.getTitle());
                     }
                 }
             } else {
@@ -1291,10 +1277,17 @@ private void playPrevious() {
             System.out.println("Invalid selection");
         }
 
+
+
         // Update the TableView with the new list.
         centerTableView.setItems(centerList);
+        //System.out.println("Added to TableView centerList: "+centerList);;
+
         titleColumn.setCellValueFactory(new PropertyValueFactory<>("title"));
         pathColumn.setCellValueFactory(new PropertyValueFactory<>("path"));
+        albumColumn.setCellValueFactory(new PropertyValueFactory<>("album"));
+        lengthColumn.setCellValueFactory(new PropertyValueFactory<>("length"));
+        artistColumn.setCellValueFactory(new PropertyValueFactory<>("artist"));
     }
 
     public Map<String, Object> assembleMetadata(Song song){
@@ -1358,7 +1351,6 @@ private void playPrevious() {
 
     private void centerTableViewClearHandler() {
         centerTableView.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
-
             @Override
             public void handle(MouseEvent event) {
                 Node clickedNode = event.getPickResult().getIntersectedNode();
@@ -1383,11 +1375,6 @@ private void playPrevious() {
                 }
             }
         });
-
-
-
-
-
                 /*Node clickedNode = event.getPickResult().getIntersectedNode();
                 while (clickedNode != null && !(clickedNode instanceof TableRow<?>)) {
                     clickedNode = clickedNode.getParent();
@@ -1433,6 +1420,33 @@ private void playPrevious() {
                     playingTableView.setItems(queue.getQueue());
                     queueTitleColumn.setCellValueFactory(new PropertyValueFactory<>("title"));
                 }*/
+    }
+    private void playingTableViewClearHandler() {
+        playingTableView.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent event) {
+                Node clickedNode = event.getPickResult().getIntersectedNode();
+                System.out.println("Clicked node: " + clickedNode);
+
+                // Traverse the node hierarchy to find the TableRow
+                while (clickedNode != null && !(clickedNode instanceof TableRow)) {
+                    clickedNode = clickedNode.getParent();
+                }
+
+                if (clickedNode instanceof TableRow) {
+                    TableRow<?> row = (TableRow<?>) clickedNode;
+                    Object rowItem = row.getItem();
+
+                    if (rowItem instanceof Song) {
+                        Song clickedSong = (Song) rowItem;
+                        System.out.println("A Song was clicked: " + clickedSong.getTitle());
+                    } else {
+                        System.out.println("No valid Song object in the clicked row.");
+                        playingTableView.getSelectionModel().clearSelection();
+                    }
+                }
+            }
+        });
     }
 
 
@@ -1559,11 +1573,14 @@ private void playPrevious() {
                 }
             }
         });
-        //todo: handle enter press as no valid item is selected
+        //done: handle enter press as no valid item is selected
         //----------KeyEvents----------
         centerTableView.setOnKeyPressed(keyEvent -> {
 
-
+            if (centerTableView.getSelectionModel().getSelectedItem() == null){
+                System.out.println(">centerTableView: no song selected, return...");
+                return;
+            }
             if (keyEvent.isAltDown()) {
                 if (keyEvent.getCode() == KeyCode.ENTER) {
                     selectedSong = centerTableView.getSelectionModel().getSelectedItem();
@@ -1597,7 +1614,12 @@ private void playPrevious() {
         });
     }
     private void initializePlayingTableViewListener(){
+
         playingTableView.setOnMouseClicked(event -> {
+            if (playingTableView.getSelectionModel().getSelectedItem() == null){
+                System.out.println(">playingTableView: No song selected, returning...");
+                return;
+            }
             if (event.getClickCount() == 2) {
                 selectedSong = playingTableView.getSelectionModel().getSelectedItem();
                 handleEnterOrDoubleClickPlayingTableView();
@@ -1605,6 +1627,10 @@ private void playPrevious() {
         });
 
         playingTableView.setOnKeyPressed(keyEvent -> {
+            if (playingTableView.getSelectionModel().getSelectedItem() == null){
+                System.out.println(">playingTableView: No song selected, returning...");
+                return;
+            }
             if (keyEvent.getCode() == KeyCode.ENTER) {
                 selectedSong = playingTableView.getSelectionModel().getSelectedItem();
                 handleEnterOrDoubleClickPlayingTableView();

@@ -6,6 +6,16 @@
 
 package org.example.musikplayer_doit.model;
 
+import org.jaudiotagger.audio.AudioFile;
+import org.jaudiotagger.audio.AudioFileIO;
+import org.jaudiotagger.audio.AudioHeader;
+import org.jaudiotagger.audio.mp3.MP3File;
+import org.jaudiotagger.tag.FieldKey;
+import org.jaudiotagger.tag.Tag;
+
+import javax.swing.text.html.HTML;
+import java.io.File;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -16,7 +26,41 @@ public class MP3FileMetadataExtractor {
     }
 
     //check for existence of higher tags first and call them, then use basic getTag
+    public void extractTagFromMp3(Song[] songArray) {
 
+        for (var s : songArray) {
+            try {
+                File file = new File(s.getPath());
+                AudioFile audioFile = AudioFileIO.read(file);
+                Tag tag = audioFile.getTag();
+                if (tag != null) {
+//                    String extractedAlbum = tag.getFirst(FieldKey.ALBUM);
+//                    s.setAlbum(extractedAlbum);
+                    s.addMetadata("Album", tag.getFirst(FieldKey.ALBUM));
+                    //s.addMetadata("Title", tag.getFirst(FieldKey.TITLE));
+                    s.addMetadata("Artist", tag.getFirst(FieldKey.ARTIST));
+                    s.addMetadata("Genre", tag.getFirst(FieldKey.GENRE));
+                    //s.addMetadata("Track", tag.getFirst(FieldKey.TRACK));
+                    s.addMetadata("Length", String.valueOf(audioFile.getAudioHeader().getTrackLength()));
+                    System.out.println("Scanned metadata for file" + s.getPath()+"\nMetadata scanned: "+
+                            tag.getFirst(FieldKey.ALBUM)
+                            //+tag.getFirst(FieldKey.TITLE)
+                            +tag.getFirst(FieldKey.ARTIST)
+                            +tag.getFirst(FieldKey.GENRE)
+                            +tag.getFirst(String.valueOf(audioFile.getAudioHeader().getTrackLength())));
+                            //+tag.getFirst(FieldKey.TRACK))
+                } else {
+                    System.out.println("No tag found for file: "+file.getName());
+                }
+
+//            metadataMap.put("bitrate", audioFile.getAudioHeader().getBitRate());
+//            metadataMap.put("sampleRate", audioFile.getAudioHeader().getSampleRate());
+            } catch (Exception e) {
+                System.err.println("Error: " + e.getMessage());
+            }
+        }
+
+    }
 
 
 }
@@ -227,6 +271,7 @@ public class MP3FileMetadataExtractor {
 //     *              if(v1Tag.getFirst(FieldKey.TRACK) != null) v2Tag.setField(FieldKey.TRACK, v1Tag.getFirst(FieldKey.TRACK));
 //     *              if(v1Tag.getFirst(FieldKey.YEAR) != null) v2Tag.setField(FieldKey.YEAR, v1Tag.getFirst(FieldKey.YEAR));
 //     *              if(v1Tag.getFirst(FieldKey.GENRE) != null) v2Tag.setField(FieldKey.GENRE, v1Tag.getFirst(FieldKey.GENRE));
+//     *              if(v1Tag.getFirst(FieldKey.COMMENT) != null) v2Tag.setField(FieldKey.COMMENT, v1Tag.getFirst(FieldKey.COMMENT));
 //     *              if(v1Tag.getFirst(FieldKey.COMMENT) != null) v2Tag.setField(FieldKey.COMMENT, v1Tag.getFirst(FieldKey.COMMENT));
 //     *              // ... potentially others if needed, v1 is limited
 //     *         } catch (TagException e) {
