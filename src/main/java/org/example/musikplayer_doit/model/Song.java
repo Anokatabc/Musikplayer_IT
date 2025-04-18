@@ -8,6 +8,7 @@ import org.jaudiotagger.tag.Tag;
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 public class Song {
 
@@ -24,6 +25,7 @@ public class Song {
     private String path;
     private String album;
     private Map<String, Object> metadata;
+
 
     public Song (String filePath, Map<String, Object> metadata){
         this.file = new File(filePath);
@@ -91,10 +93,10 @@ public class Song {
 
             // Ausgabe der aufrufenden Methode
             //System.out.println("Method getAlbum() called by: " + callerMethod)
-            System.out.println("returned:  "+metadata.getOrDefault("Album", "hgf"));
+
             return metadata.get("Album").toString();
         }
-        System.out.println("Setting default value for Album");
+
         return "Unbekanntes Album";
     }
 
@@ -106,10 +108,10 @@ public class Song {
 
             // Ausgabe der aufrufenden Methode
             //System.out.println("Method getAlbum() called by: " + callerMethod)
-            System.out.println("returned:  "+metadata.getOrDefault("Artist", "hgf"));
+
             return metadata.get("Artist").toString();
         }
-        System.out.println("Setting default value for Album");
+
         return "Unbekanntes Album";
     }
     public String getGenre() {
@@ -120,10 +122,10 @@ public class Song {
 
             // Ausgabe der aufrufenden Methode
             //System.out.println("Method getGenre() called by: " + callerMethod)
-            System.out.println("returned:  "+metadata.getOrDefault("Genre", "hgf"));
+
             return metadata.get("Genre").toString();
         }
-        System.out.println("Setting default value for Album");
+
         return "Unbekanntes Album";
     }
 
@@ -151,6 +153,8 @@ public class Song {
 
         return "Unknown";
     }
+
+
 
     public void addMetadata(String key, Object value) {
 //        Runtime runtime = Runtime.getRuntime();

@@ -11,39 +11,72 @@
 <?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.control.TreeView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.text.Font?>
 
-<BorderPane fx:id="borderPane" prefHeight="707.0" prefWidth="1037.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.example.musikplayer_doit.controller.Controller">
+<BorderPane fx:id="borderPane" prefHeight="707.0" prefWidth="1075.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.example.musikplayer_doit.controller.Controller">
    <bottom>
-      <HBox prefHeight="100.0" prefWidth="200.0" BorderPane.alignment="CENTER">
+      <HBox minHeight="60.0" prefHeight="62.0" prefWidth="1075.0" BorderPane.alignment="CENTER">
          <children>
             <Slider fx:id="volumeSlider" focusTraversable="false" onDragDetected="#handleVolumeSlider" prefHeight="51.0" prefWidth="105.0" />
-            <Button focusTraversable="false" onAction="#clickStop" prefHeight="50.0" prefWidth="50.0" style="-fx-background-radius: 4px;" text="Stop" />
-            <Button focusTraversable="false" onAction="#clickPrevious" prefHeight="50.0" prefWidth="50.0" text="⏮" />
+            <Button focusTraversable="false" onAction="#clickStop" prefHeight="40.0" prefWidth="40.0" style="-fx-background-radius: 4px;" text="⏹">
+               <font>
+                  <Font size="18.0" />
+               </font></Button>
+            <Button focusTraversable="false" onAction="#clickPrevious" prefHeight="40.0" prefWidth="40.0" text="⏮">
+               <font>
+                  <Font size="18.0" />
+               </font></Button>
             <Button fx:id="playButton" contentDisplay="CENTER" focusTraversable="false" maxHeight="50.0" maxWidth="50.0" minHeight="50.0" minWidth="50.0" onAction="#clickPlay" prefHeight="50.0" prefWidth="50.0" style="-fx-background-radius: 50; -fx-font-size: 25px;" textAlignment="CENTER" textOverrun="CLIP">
                <font>
                   <Font size="38.0" />
                </font>
                <graphic>
-                  <Label fx:id="playButtonLabel" alignment="CENTER" maxWidth="50.0" minWidth="50.0" prefHeight="36.0" prefWidth="50.0" text="▶" />
+                  <Label fx:id="playButtonLabel" alignment="CENTER" maxWidth="50.0" minWidth="50.0" prefHeight="40.0" prefWidth="40.0" text="▶">
+                     <font>
+                        <Font size="28.0" />
+                     </font></Label>
                </graphic>
             </Button>
-            <Button focusTraversable="false" onAction="#clickNext" prefHeight="50.0" prefWidth="50.0" text="⏭" />
-            <Label fx:id="barTimer" alignment="CENTER" focusTraversable="false" prefHeight="49.0" prefWidth="48.0" text="00:00" textAlignment="CENTER">
+            <Button focusTraversable="false" onAction="#clickNext" prefHeight="40.0" prefWidth="40.0" text="⏭">
+               <font>
+                  <Font size="18.0" />
+               </font></Button>
+            <ToggleButton fx:id="autoPlayButton" focusTraversable="false" mnemonicParsing="false" prefHeight="40.0" prefWidth="40.0" styleClass="#autoPlayButton:pressed {    -fx-background-color: derive(-fx-base, 50%);}" text="⏯">
+               <tooltip>
+                  <Tooltip text="Toggle AutoPlay" />
+               </tooltip>
+            </ToggleButton>
+            <Label fx:id="barTimer" alignment="CENTER" focusTraversable="false" prefHeight="45.0" prefWidth="48.0" text="00:00" textAlignment="CENTER">
                <rotationAxis>
                   <Point3D />
                </rotationAxis>
                <font>
                   <Font size="16.0" />
                </font></Label>
-            <ProgressBar fx:id="progressBar" focusTraversable="false" onMouseMoved="#updateProgressBar" prefHeight="49.0" prefWidth="532.0" progress="0.0">
+            <StackPane minHeight="31.0" minWidth="100.0" prefHeight="76.0" prefWidth="421.0">
+               <children>
+                  <ProgressBar fx:id="progressBar" focusTraversable="false" maxHeight="150.0" minHeight="30.0" onMouseMoved="#updateProgressBar" prefHeight="45.0" prefWidth="421.0" progress="0.0">
+                     <tooltip>
+                        <Tooltip fx:id="barTooltip" />
+                     </tooltip>
+                  </ProgressBar>
+                  <Label fx:id="progressBarLabel" />
+               </children>
+            </StackPane>
+            <ToggleButton fx:id="repeatQueueButton" focusTraversable="false" mnemonicParsing="false" prefHeight="40.0" prefWidth="40.0" styleClass="#autoPlayButton:pressed {    -fx-background-color: derive(-fx-base, 50%);}" text="↻">
                <tooltip>
-                  <Tooltip fx:id="barTooltip" />
-               </tooltip></ProgressBar>
+                  <Tooltip text="Toggle AutoPlay" />
+               </tooltip>
+               <font>
+                  <Font size="20.0" />
+               </font>
+            </ToggleButton>
          </children>
       </HBox>
    </bottom>
@@ -70,22 +103,22 @@
       </MenuBar>
    </top>
    <center>
-      <SplitPane dividerPositions="0.22705314009661837, 0.8367149758454107" prefHeight="160.0" prefWidth="200.0" BorderPane.alignment="CENTER">
+      <SplitPane dividerPositions="0.1966449207828518, 0.83690587138863" prefHeight="589.0" prefWidth="1075.0" BorderPane.alignment="CENTER">
         <items>
-            <TreeView fx:id="folderTreeView" minWidth="10.0" onMouseClicked="#selectTreeItem" prefHeight="580.0" prefWidth="381.0" />
+            <TreeView fx:id="folderTreeView" minWidth="10.0" onMouseClicked="#selectTreeItem" prefHeight="580.0" prefWidth="229.0" />
             <TableView fx:id="centerTableView" minWidth="10.0" prefHeight="580.0" prefWidth="187.0">
                <columns>
                   <TableColumn fx:id="titleColumn" prefWidth="131.0" text="Title" />
-                  <TableColumn fx:id="lengthColumn" prefWidth="131.0" text="Length" />
-                  <TableColumn fx:id="albumColumn" prefWidth="131.0" text="Album" />
+                  <TableColumn fx:id="lengthColumn" prefWidth="64.0" text="Length" />
+                  <TableColumn fx:id="albumColumn" prefWidth="198.0" text="Album" />
                   <TableColumn fx:id="artistColumn" prefWidth="131.0" text="Artist" />
-                  <TableColumn fx:id="pathColumn" prefWidth="131.0" text="Path" />
+                  <TableColumn fx:id="pathColumn" prefWidth="131.0" text="Full Path" />
                </columns>
             </TableView>
-            <TableView fx:id="playingTableView" minWidth="10.0" prefHeight="580.0" prefWidth="191.0">
+            <TableView fx:id="playingTableView" minWidth="10.0" prefHeight="580.0" prefWidth="166.0">
                <columns>
                   <TableColumn fx:id="queueTitleColumn" prefWidth="105.0" text="Title" />
-                  <TableColumn fx:id="queueLengthColumn" prefWidth="61.0" text="Length" />
+                  <TableColumn fx:id="queueLengthColumn" prefWidth="67.0" text="Length" />
                </columns>
             </TableView>
         </items>

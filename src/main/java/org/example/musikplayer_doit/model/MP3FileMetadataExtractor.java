@@ -26,7 +26,7 @@ public class MP3FileMetadataExtractor {
     }
 
     //check for existence of higher tags first and call them, then use basic getTag
-    public void extractTagFromMp3(Song[] songArray) {
+    public void extractTagFromMp3(Song[] songArray) throws NullPointerException {
 
         for (var s : songArray) {
             try {
@@ -40,7 +40,6 @@ public class MP3FileMetadataExtractor {
                     //s.addMetadata("Title", tag.getFirst(FieldKey.TITLE));
                     s.addMetadata("Artist", tag.getFirst(FieldKey.ARTIST));
                     s.addMetadata("Genre", tag.getFirst(FieldKey.GENRE));
-                    //s.addMetadata("Track", tag.getFirst(FieldKey.TRACK));
                     s.addMetadata("Length", String.valueOf(audioFile.getAudioHeader().getTrackLength()));
                     System.out.println("Scanned metadata for file" + s.getPath()+"\nMetadata scanned: "+
                             tag.getFirst(FieldKey.ALBUM)
@@ -48,7 +47,7 @@ public class MP3FileMetadataExtractor {
                             +tag.getFirst(FieldKey.ARTIST)
                             +tag.getFirst(FieldKey.GENRE)
                             +tag.getFirst(String.valueOf(audioFile.getAudioHeader().getTrackLength())));
-                            //+tag.getFirst(FieldKey.TRACK))
+
                 } else {
                     System.out.println("No tag found for file: "+file.getName());
                 }
