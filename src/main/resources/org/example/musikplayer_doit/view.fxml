@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.geometry.Insets?>
 <?import javafx.geometry.Point3D?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
@@ -21,47 +22,111 @@
 
 <BorderPane fx:id="borderPane" prefHeight="707.0" prefWidth="1075.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.example.musikplayer_doit.controller.Controller">
    <bottom>
-      <HBox minHeight="60.0" prefHeight="62.0" prefWidth="1075.0" BorderPane.alignment="CENTER">
+      <HBox alignment="CENTER_LEFT" maxHeight="300.0" maxWidth="1800.0" minHeight="60.0" prefHeight="62.0" prefWidth="1075.0" BorderPane.alignment="BOTTOM_CENTER">
          <children>
-            <Slider fx:id="volumeSlider" focusTraversable="false" onDragDetected="#handleVolumeSlider" prefHeight="51.0" prefWidth="105.0" />
-            <Button focusTraversable="false" onAction="#clickStop" prefHeight="40.0" prefWidth="40.0" style="-fx-background-radius: 4px;" text="⏹">
+            <Slider fx:id="volumeSlider" focusTraversable="false" onDragDetected="#handleVolumeSlider" prefHeight="51.0" prefWidth="135.0">
+               <opaqueInsets>
+                  <Insets />
+               </opaqueInsets>
+               <padding>
+                  <Insets bottom="10.0" left="20.0" right="20.0" top="10.0" />
+               </padding></Slider>
+            <Button contentDisplay="CENTER" focusTraversable="false" minHeight="30.0" minWidth="30.0" onAction="#clickStop" prefHeight="35.0" prefWidth="40.0" style="-fx-background-radius: 4px;" textAlignment="CENTER">
+               <font>
+                  <Font size="15.0" />
+               </font>
+               <graphic>
+                  <Label alignment="CENTER" contentDisplay="CENTER" prefHeight="21.0" prefWidth="32.0" text="⏹" textAlignment="CENTER">
+                     <font>
+                        <Font size="15.0" />
+                     </font>
+                  </Label>
+               </graphic>
+               <HBox.margin>
+                  <Insets />
+               </HBox.margin></Button>
+            <Button contentDisplay="CENTER" focusTraversable="false" minHeight="30.0" minWidth="30.0" onAction="#clickPrevious" prefHeight="35.0" prefWidth="40.0" textAlignment="CENTER">
                <font>
                   <Font size="18.0" />
-               </font></Button>
-            <Button focusTraversable="false" onAction="#clickPrevious" prefHeight="40.0" prefWidth="40.0" text="⏮">
-               <font>
-                  <Font size="18.0" />
-               </font></Button>
-            <Button fx:id="playButton" contentDisplay="CENTER" focusTraversable="false" maxHeight="50.0" maxWidth="50.0" minHeight="50.0" minWidth="50.0" onAction="#clickPlay" prefHeight="50.0" prefWidth="50.0" style="-fx-background-radius: 50; -fx-font-size: 25px;" textAlignment="CENTER" textOverrun="CLIP">
+               </font>
+               <graphic>
+                  <Label alignment="CENTER" contentDisplay="CENTER" minHeight="30.0" minWidth="30.0" prefHeight="40.0" prefWidth="40.0" text="⏮" textAlignment="CENTER">
+                     <font>
+                        <Font size="18.0" />
+                     </font>
+                     <padding>
+                        <Insets bottom="5.0" />
+                     </padding>
+                  </Label>
+               </graphic>
+               <HBox.margin>
+                  <Insets left="3.0" right="3.0" />
+               </HBox.margin></Button>
+            <Button fx:id="playButton" contentDisplay="CENTER" focusTraversable="false" maxHeight="50.0" maxWidth="50.0" minHeight="30.0" minWidth="30.0" prefHeight="35.0" prefWidth="50.0" style="-fx-background-radius: 50; -fx-font-size: 25px;" textAlignment="CENTER" textOverrun="CLIP">
                <font>
                   <Font size="38.0" />
                </font>
                <graphic>
-                  <Label fx:id="playButtonLabel" alignment="CENTER" maxWidth="50.0" minWidth="50.0" prefHeight="40.0" prefWidth="40.0" text="▶">
+                  <Label fx:id="playButtonLabel" alignment="CENTER" contentDisplay="CENTER" maxWidth="50.0" minHeight="30.0" minWidth="30.0" onMouseClicked="#clickPlay" prefHeight="41.0" prefWidth="42.0" text="▶" textAlignment="CENTER">
                      <font>
-                        <Font size="28.0" />
+                        <Font size="26.0" />
                      </font></Label>
                </graphic>
+               <HBox.margin>
+                  <Insets />
+               </HBox.margin>
             </Button>
-            <Button focusTraversable="false" onAction="#clickNext" prefHeight="40.0" prefWidth="40.0" text="⏭">
+            <Button contentDisplay="CENTER" focusTraversable="false" minHeight="30.0" minWidth="30.0" onAction="#clickNext" prefHeight="35.0" prefWidth="40.0" textAlignment="CENTER">
                <font>
                   <Font size="18.0" />
-               </font></Button>
-            <ToggleButton fx:id="autoPlayButton" focusTraversable="false" mnemonicParsing="false" prefHeight="40.0" prefWidth="40.0" styleClass="#autoPlayButton:pressed {    -fx-background-color: derive(-fx-base, 50%);}" text="⏯">
+               </font>
+               <graphic>
+                  <Label alignment="CENTER" contentDisplay="CENTER" minHeight="30.0" minWidth="30.0" prefHeight="40.0" prefWidth="40.0" text="⏭" textAlignment="CENTER">
+                     <font>
+                        <Font size="18.0" />
+                     </font>
+                     <padding>
+                        <Insets bottom="5.0" />
+                     </padding>
+                  </Label>
+               </graphic>
+               <HBox.margin>
+                  <Insets left="3.0" right="3.0" />
+               </HBox.margin></Button>
+            <ToggleButton fx:id="autoPlayButton" contentDisplay="CENTER" focusTraversable="false" minHeight="30.0" minWidth="30.0" mnemonicParsing="false" prefHeight="35.0" prefWidth="40.0" styleClass="#autoPlayButton:pressed {    -fx-background-color: derive(-fx-base, 50%);}" textAlignment="CENTER">
                <tooltip>
                   <Tooltip text="Toggle AutoPlay" />
                </tooltip>
+               <font>
+                  <Font size="20.0" />
+               </font>
+               <HBox.margin>
+                  <Insets />
+               </HBox.margin>
+               <graphic>
+                  <Label text="⏯">
+                     <font>
+                        <Font size="22.0" />
+                     </font>
+                     <padding>
+                        <Insets bottom="3.0" />
+                     </padding>
+                  </Label>
+               </graphic>
             </ToggleButton>
-            <Label fx:id="barTimer" alignment="CENTER" focusTraversable="false" prefHeight="45.0" prefWidth="48.0" text="00:00" textAlignment="CENTER">
+            <Label fx:id="barTimer" alignment="CENTER" contentDisplay="CENTER" focusTraversable="false" prefHeight="45.0" prefWidth="48.0" text="00:00" textAlignment="CENTER">
                <rotationAxis>
                   <Point3D />
                </rotationAxis>
                <font>
                   <Font size="16.0" />
-               </font></Label>
-            <StackPane minHeight="31.0" minWidth="100.0" prefHeight="76.0" prefWidth="421.0">
+               </font>
+               <HBox.margin>
+                  <Insets />
+               </HBox.margin></Label>
+            <StackPane maxHeight="300.0" maxWidth="1000.0" minHeight="31.0" minWidth="100.0" prefHeight="76.0" prefWidth="421.0">
                <children>
-                  <ProgressBar fx:id="progressBar" focusTraversable="false" maxHeight="150.0" minHeight="30.0" onMouseMoved="#updateProgressBar" prefHeight="45.0" prefWidth="421.0" progress="0.0">
+                  <ProgressBar fx:id="progressBar" focusTraversable="false" maxHeight="250.0" maxWidth="1000.0" minHeight="30.0" prefHeight="62.0" prefWidth="482.0" progress="0.0">
                      <tooltip>
                         <Tooltip fx:id="barTooltip" />
                      </tooltip>
@@ -69,7 +134,7 @@
                   <Label fx:id="progressBarLabel" />
                </children>
             </StackPane>
-            <ToggleButton fx:id="repeatQueueButton" focusTraversable="false" mnemonicParsing="false" prefHeight="40.0" prefWidth="40.0" styleClass="#autoPlayButton:pressed {    -fx-background-color: derive(-fx-base, 50%);}" text="↻">
+            <ToggleButton fx:id="repeatQueueButton" contentDisplay="CENTER" focusTraversable="false" minHeight="30.0" minWidth="30.0" mnemonicParsing="false" prefHeight="35.0" prefWidth="40.0" styleClass="#autoPlayButton:pressed {    -fx-background-color: derive(-fx-base, 50%);}" text="↻" textAlignment="CENTER">
                <tooltip>
                   <Tooltip text="Toggle AutoPlay" />
                </tooltip>

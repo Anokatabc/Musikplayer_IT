@@ -29,6 +29,4 @@ public class App extends Application {
         // Launch the JavaFX application
         launch();
     }
-
-
 }

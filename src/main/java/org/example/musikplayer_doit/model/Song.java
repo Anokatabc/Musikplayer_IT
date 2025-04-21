@@ -1,29 +1,19 @@
 package org.example.musikplayer_doit.model;
 
-import org.jaudiotagger.audio.AudioFile;
-import org.jaudiotagger.audio.AudioFileIO;
-import org.jaudiotagger.tag.FieldKey;
-import org.jaudiotagger.tag.Tag;
-
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 public class Song {
 
-//Interpol Projekt anscheuan für ObservableList
-
-    //private Map<String, File/Song?> metadataCache = new HashMap<>();
     //todo: class Cache oder im Model?
     //todo: Sqlite auch für persistente Config Einstellungen nutzen
-    //public void addToCache(){}
-    //public void getFromCache(){}
-    //public boolean isInCache(){}
+    ///In einer Version 2.0 müsste man vermutlich für title das korrente Metadaten-Feld nutzen
     private String title;
     private File file;
     private String path;
     private String album;
+    private String artist;
     private Map<String, Object> metadata;
 
 
@@ -31,52 +21,8 @@ public class Song {
         this.file = new File(filePath);
     this.title = file.getName();
     this.path = filePath;
-    //this.album = (album != null) ? album : "null";
-    //&& !album.isEmpty()
 
 }
-
-    public void setAlbum(String album) {
-        this.album = album;
-        System.out.println("Successfully set album: "+album);
-    }
-
-//    public String getAlbum() {
-//        if (album != null){
-//            System.out.println("Return album: "+album);
-//            return album;
-//        } else {
-//            System.out.println("Album is null");
-//            return null;
-//        }
-//
-//    }
-
-//    public File getFile() {
-//        return file;
-//    }
-//
-//    public void setFile(File file) {
-//        this.file = file;
-//    }
-
-//    public void loadMetadata(Song song){
-//        try {
-//            AudioFile audioFile = AudioFileIO.read(file);
-//            Tag tag = audioFile.getTag();
-//            if (tag != null){
-//
-//
-//                metadata.put("Title", tag.getFirst(FieldKey.TITLE));
-//                metadata.put("Artist", tag.getFirst(FieldKey.ARTIST));
-//                metadata.put("Album", tag.getFirst(FieldKey.ALBUM));
-//                metadata.put("Year", tag.getFirst(FieldKey.YEAR));
-//                metadata.put("Genre", tag.getFirst(FieldKey.GENRE));
-//            }
-//        } catch (Exception e) {
-//            System.err.println("Error reading metadata for file: "+e.getMessage());
-//        }
-//    }
 
     public String getTitle() {
         return title;
@@ -111,8 +57,9 @@ public class Song {
 
             return metadata.get("Artist").toString();
         }
-
-        return "Unbekanntes Album";
+        else {
+            return "Unknown Artist";
+        }
     }
     public String getGenre() {
         if (metadata != null && metadata.containsKey("Genre")) {
@@ -149,8 +96,6 @@ public class Song {
                 return lengthObj.toString();
             }
         }
-
-
         return "Unknown";
     }
 
