@@ -20,7 +20,8 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.text.Font?>
 
-<BorderPane fx:id="borderPane" prefHeight="707.0" prefWidth="1075.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.example.musikplayer_doit.controller.Controller">
+<BorderPane fx:id="borderPane" prefHeight="707.0" prefWidth="1075.0" stylesheets="@style.css" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.example.musikplayer_doit.controller.Controller">
+
    <bottom>
       <HBox alignment="CENTER_LEFT" maxHeight="300.0" maxWidth="1800.0" minHeight="60.0" prefHeight="62.0" prefWidth="1075.0" BorderPane.alignment="BOTTOM_CENTER">
          <children>
@@ -50,7 +51,7 @@
                   <Font size="18.0" />
                </font>
                <graphic>
-                  <Label alignment="CENTER" contentDisplay="CENTER" minHeight="30.0" minWidth="30.0" prefHeight="40.0" prefWidth="40.0" text="⏮" textAlignment="CENTER">
+                  <Label id="previousButton" alignment="CENTER" contentDisplay="CENTER" minHeight="30.0" minWidth="30.0" prefHeight="40.0" prefWidth="40.0" text="⏮" textAlignment="CENTER">
                      <font>
                         <Font size="18.0" />
                      </font>
@@ -62,7 +63,7 @@
                <HBox.margin>
                   <Insets left="3.0" right="3.0" />
                </HBox.margin></Button>
-            <Button fx:id="playButton" contentDisplay="CENTER" focusTraversable="false" maxHeight="50.0" maxWidth="50.0" minHeight="30.0" minWidth="30.0" prefHeight="35.0" prefWidth="50.0" style="-fx-background-radius: 50; -fx-font-size: 25px;" textAlignment="CENTER" textOverrun="CLIP">
+            <Button id="playButton" fx:id="playButton" contentDisplay="CENTER" focusTraversable="false" maxHeight="50.0" maxWidth="50.0" minHeight="30.0" minWidth="30.0" prefHeight="35.0" prefWidth="50.0" style="-fx-background-radius: 50; -fx-font-size: 25px;" textAlignment="CENTER" textOverrun="CLIP">
                <font>
                   <Font size="38.0" />
                </font>
@@ -81,7 +82,7 @@
                   <Font size="18.0" />
                </font>
                <graphic>
-                  <Label alignment="CENTER" contentDisplay="CENTER" minHeight="30.0" minWidth="30.0" prefHeight="40.0" prefWidth="40.0" text="⏭" textAlignment="CENTER">
+                  <Label id="nextButton" alignment="CENTER" contentDisplay="CENTER" minHeight="30.0" minWidth="30.0" prefHeight="40.0" prefWidth="40.0" text="⏭" textAlignment="CENTER">
                      <font>
                         <Font size="18.0" />
                      </font>
@@ -114,7 +115,7 @@
                   </Label>
                </graphic>
             </ToggleButton>
-            <Label fx:id="barTimer" alignment="CENTER" contentDisplay="CENTER" focusTraversable="false" prefHeight="45.0" prefWidth="48.0" text="00:00" textAlignment="CENTER">
+            <Label fx:id="barTimer" alignment="CENTER" contentDisplay="CENTER" focusTraversable="false" prefHeight="45.0" prefWidth="56.0" text="00:00" textAlignment="CENTER">
                <rotationAxis>
                   <Point3D />
                </rotationAxis>
@@ -134,6 +135,11 @@
                   <Label fx:id="progressBarLabel" />
                </children>
             </StackPane>
+            <Label fx:id="barRemainingTimer" alignment="CENTER" contentDisplay="CENTER" focusTraversable="false" prefHeight="45.0" prefWidth="56.0" text="00:00" textAlignment="CENTER">
+               <font>
+                  <Font size="16.0" />
+               </font>
+            </Label>
             <ToggleButton fx:id="repeatQueueButton" contentDisplay="CENTER" focusTraversable="false" minHeight="30.0" minWidth="30.0" mnemonicParsing="false" prefHeight="35.0" prefWidth="40.0" styleClass="#autoPlayButton:pressed {    -fx-background-color: derive(-fx-base, 50%);}" text="↻" textAlignment="CENTER">
                <tooltip>
                   <Tooltip text="Toggle AutoPlay" />
@@ -141,6 +147,9 @@
                <font>
                   <Font size="20.0" />
                </font>
+               <HBox.margin>
+                  <Insets left="10.0" />
+               </HBox.margin>
             </ToggleButton>
          </children>
       </HBox>
@@ -161,8 +170,7 @@
             <Menu text="Help">
                <items>
                   <MenuItem text="About" />
-                  <MenuItem mnemonicParsing="false" onAction="#handleRefresh" text="Refresh Program" />
-               </items>
+                  <MenuItem mnemonicParsing="false" onAction="#handleRefresh" text="Refresh Program" />               </items>
             </Menu>
          </menus>
       </MenuBar>
@@ -182,7 +190,7 @@
             </TableView>
             <TableView fx:id="playingTableView" minWidth="10.0" prefHeight="580.0" prefWidth="166.0">
                <columns>
-                  <TableColumn fx:id="queueTitleColumn" prefWidth="105.0" text="Title" />
+                  <TableColumn fx:id="queueTitleColumn" prefWidth="105.0" text="Now Playing" />
                   <TableColumn fx:id="queueLengthColumn" prefWidth="67.0" text="Length" />
                </columns>
             </TableView>

@@ -1,10 +1,11 @@
 //todo: Button für Sleep Timer: Mit oder ohne Volumeverringerung über Zeit.
 //todo: drag & drop songs
-
+//todo: mute togglebutton left of Slider
 //todo: public private nochmal genau anschauen, was und warum setzt man sie?
 // falls mit Datenbank, Dump im Zip mitschicken.
+//note: JFoenixSlider / JFXSlider für .filled-track / .colored-track Eigenschaft
 //debugging thread: Thread.currentThread().getName()
-// oder Platform.isFxApplicationThread()
+//// oder Platform.isFxApplicationThread()
 
 // - - - - - - - - - - - - - - - - - - - - - Controller Aufbau: - - - - - - - - - - - - - - - - - - - - - - - - -
 // - - - - - - - - - - - - - - - - - - - - - initialize Start - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -23,12 +24,16 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
+import javafx.concurrent.Worker;
+import javafx.concurrent.WorkerStateEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.BorderPane;
@@ -39,11 +44,11 @@ import javafx.util.Duration;
 import org.example.musikplayer_doit.model.MP3FileMetadataExtractor;
 import org.example.musikplayer_doit.model.Playlist;
 import org.example.musikplayer_doit.model.Song;
-import org.w3c.dom.ls.LSOutput;
 
 import java.io.File;
+import java.io.FilenameFilter;
+import java.util.Arrays;
 import java.util.HashMap;
-import java.util.UUID;
 
 public class Controller {
 
@@ -77,6 +82,8 @@ public class Controller {
     @FXML
     Label barTimer;
     @FXML
+    Label barRemainingTimer;
+    @FXML
     Slider volumeSlider;
     @FXML
     Button playButton;
@@ -105,53 +112,10 @@ public class Controller {
     public ObservableList<Song> centerList = FXCollections.observableArrayList();
     private ObservableList<Song> currentQueue;
 
-
-    //@FXML
-    //private ToggleButton repeatButton;
-    //
-    //private enum RepeatState {
-    //    UNCLICKED, REPEAT_QUEUE, REPEAT_SINGLE
-    //}
-    //
-    //private RepeatState currentState = RepeatState.UNCLICKED;
-    //
-    //@FXML
-    //private void initialze() {
-    //    repeatButton.setOnAction(event -> toggleRepeatState());
-    //    updateButtonAppearance(); // Initiales Aussehen setzen
-    //}
-    //
-    //private void toggleRepeatState() {
-    //    // Zustand wechseln
-    //    switch (currentState) {
-    //        case UNCLICKED -> currentState = RepeatState.REPEAT_QUEUE;
-    //        case REPEAT_QUEUE -> currentState = RepeatState.REPEAT_SINGLE;
-    //        case REPEAT_SINGLE -> currentState = RepeatState.UNCLICKED;
-    //    }
-    //    updateButtonAppearance();
-    //}
-    //
-    //private void updateButtonAppearance() {
-    //    // Aussehen des Buttons basierend auf dem Zustand ändern
-    //    switch (currentState) {
-    //        case UNCLICKED -> {
-    //            repeatButton.setText("Off");
-    //            repeatButton.setStyle("-fx-background-color: lightgray;");
-    //        }
-    //        case REPEAT_QUEUE -> {
-    //            repeatButton.setText("Repeat Queue");
-    //            repeatButton.setStyle("-fx-background-color: lightblue;");
-    //        }
-    //        case REPEAT_SINGLE -> {
-    //            repeatButton.setText("Repeat Single");
-    //            repeatButton.setStyle("-fx-background-color: lightgreen;");
-    //        }
-    //    }
-    //}
-
     // - - - - - - - - - - - - - - - - - - - - - initialize Start - - - - - - - - - - - - - - - - - - - - - - - - -
 
     public void initialize() {
+        System.setProperty("javafx.css.debug", "true");
         initializeTreeView();
         applyCellFactory();
         trackBorderPaneFocus();
@@ -168,8 +132,6 @@ public class Controller {
         // Initialize Queue
         queue = new Playlist();
 
-        //initializeTableHeaders();
-        //private void initializeTableHeaders(){}
         queueTitleColumn.setCellValueFactory(new PropertyValueFactory<>("title"));
         queueLengthColumn.setCellValueFactory(new PropertyValueFactory<>("length"));
         titleColumn.setCellValueFactory(new PropertyValueFactory<>("title"));
@@ -180,8 +142,8 @@ public class Controller {
     }
 
     private void initializeTreeView() {
-        //folderTreeView.setMouseTransparent(true);
-        //folderTreeView.setOpacity(0.5);
+        folderTreeView.setMouseTransparent(true);
+        folderTreeView.setOpacity(0.5);
         File rootFile = new File("My Computer");
         TreeItem<File> rootItem = new TreeItem<>(rootFile);
         //TreeItem<File> rootItem = new TreeItem<>(null);
@@ -198,66 +160,51 @@ public class Controller {
             rootItem.getChildren().add(driveItem);
             driveItem.setValue(new File(d.getAbsolutePath()));
 
-            File[] files = d.listFiles();
+            //File[] files = d.listFiles();
 
             Task<Void> task = new Task<Void>() {
                 @Override
                 protected Void call() throws Exception {
-                    for (var f : files) {
-                        if(f.isDirectory()){
-                            startTime = System.currentTimeMillis();
+                    startTime = System.currentTimeMillis();
+                    for (var f : drives) {
+                        if (f.isDirectory()) {
                             createTree(f, driveItem, 0, 10);
                         }
                     }
                     return null;
                 }
             };
-            task.setOnSucceeded(event -> System.out.println("Task abgeschlossen: Alle Verzeichnisse gescannt.\nDauer des Scans: "+(int)(System.currentTimeMillis()-startTime)+" Sekunden."));
+            task.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
+                @Override
+                public void handle(WorkerStateEvent workerStateEvent) {
+                    System.out.println("Task abgeschlossen: Alle Verzeichnisse gescannt für Festplatten: " + Arrays.toString(File.listRoots()));
+                    folderTreeView.setMouseTransparent(false);
+                    folderTreeView.setOpacity(1);
+                }
+            });
             Thread thread = new Thread(task);
             thread.setDaemon(true); // Beendet den Thread, wenn die Anwendung geschlossen wird
             thread.start();
         }
     }
 
-    private void createTree(File file, TreeItem<File> parentItem, int depth, int maxDepth) {
-        try {
-            File[] files = file.listFiles();
+    //bricht aktuell Scan ab, wenn Überordner keine mp3-Dateien enthält, auch wenn Unterordner welche enthält.
 
-            if (files == null) {
-                System.out.println("No files found in directory"+file+", returning...");
-                return;
-            }
-            if (depth > maxDepth){
-                System.out.println("Endlosschleife oder zu tiefe Ordnerverzweigung: Maximale Rekursionstiefe erreicht.");
-                return;
-            }
 
-            for (var f : files) {
-                if (f.isDirectory()) {
-                    if (containsMP3Files(f)) {
-                        TreeItem<File> treeItem = new TreeItem<>(f);
-                        parentItem.getChildren().add(treeItem);
-                        createTree(f, treeItem, depth + 1, maxDepth);
-                        loopCount++;
-                        System.out.println("Scanned: " + loopCount + " of x");
-                    }
-                }
-            }
-
-        } catch (SecurityException e) {
-            System.err.println("Cannot read File: " + e.getMessage());
-        }
-    }
-
+  //  private boolean containsMP3Files(File directory) {
+//        if (directory.isDirectory()) {
+//            File[] checkMP3File = directory.listFiles((dir, name) -> name.toLowerCase().endsWith(".mp3"));
+//            return checkMP3File != null && checkMP3File.length > 0;
+//        }
+//        return false;
     private boolean containsMP3Files(File directory) {
         if (directory.isDirectory()) {
-            File[] checkMP3File = directory.listFiles((dir, name) -> name.toLowerCase().endsWith(".mp3"));
-            //File[] files = folder.listFiles(new java.io.FilenameFilter() {
-            //    @Override
-            //    public boolean accept(File _file, String str) {
-            //        return str.toLowerCase().endsWith(".mp3");
-            //    }
-            //});
+            File[] checkMP3File = directory.listFiles(new FilenameFilter() {
+                @Override
+                public boolean accept(File dir, String name) {
+                    return name.toLowerCase().endsWith(".mp3");
+                }
+            });
             return checkMP3File != null && checkMP3File.length > 0;
         }
         return false;
@@ -293,13 +240,19 @@ public class Controller {
 
     //Fokus auf Auswahl behalten (insb. nach Klick auf VolumeSlider)
     private void trackBorderPaneFocus() {
-        borderPane.sceneProperty().addListener((observable, oldScene, newScene) -> {
-            if (newScene != null) {
-                newScene.focusOwnerProperty().addListener((obs, oldFocus, newFocus) -> {
-                    if (newFocus != volumeSlider) { // Speichere den Fokus, wenn es nicht der Slider ist
-                        previousFocus = newFocus;
-                    }
-                });
+        borderPane.sceneProperty().addListener(new ChangeListener<Scene>() {
+            @Override
+            public void changed(ObservableValue<? extends Scene> observableValue, Scene oldScene, Scene newScene) {
+                if (newScene != null) {
+                    newScene.focusOwnerProperty().addListener(new ChangeListener<Node>() {
+                        @Override
+                        public void changed(ObservableValue<? extends Node> observableValue, Node oldFocus, Node newFocus) {
+                            if (newFocus != volumeSlider) { // Speichere den Fokus, wenn es nicht der Slider ist
+                                previousFocus = newFocus;
+                            }
+                        }
+                    });
+                }
             }
         });
     }
@@ -375,6 +328,7 @@ public class Controller {
             System.out.println("No player instance found, cannot set volume. Will be updated on playback within 0.05 margin of deviation.");
         }
         volumeSlider.addEventFilter(ScrollEvent.SCROLL, scrollEvent -> {
+            //System.out.println("handleVolumeSlider is JavaFX thread="+Platform.isFxApplicationThread());
             double delta = scrollEvent.getDeltaY() > 0 ? 0.05 : -0.05;
 //                 Kurzschreibweise für:
 //                 double delta = scrollEvent.getDeltaY();
@@ -385,32 +339,38 @@ public class Controller {
 //                 }
             double previousVolume = volumeSlider.getValue();
             double newVolume = previousVolume + delta;
-            Platform.runLater(() -> {
-                volumeSlider.setValue(newVolume);
+            Platform.runLater(new Runnable() {
+                @Override
+                public void run() {
+                    volumeSlider.setValue(newVolume);
+                }
             });
             System.out.println("New Volume set by mouse wheel to: " + newVolume);
-
         });
 
         volumeSlider.addEventFilter(MouseEvent.MOUSE_RELEASED, event -> {
             if (previousFocus != null) {
                 previousFocus.requestFocus(); // Fokus zurücksetzen
             }
-
         });
 
         volumeSlider.valueProperty().addListener(new ChangeListener<Number>() {
             @Override
-            public void changed(ObservableValue<? extends Number> observableValue, Number oldNunmber, Number newNumber) {
+            public void changed(ObservableValue<? extends Number> observableValue, Number oldNumber, Number newNumber) {
+                //System.out.println("handleVolumeSlider is JavaFX thread="+Platform.isFxApplicationThread());
                 System.out.println("initial volume level: " + volumeSlider.getValue());
                 double volumeSet = newNumber.doubleValue();
 
 
                 if (player != null) {
-                    System.out.println("player volume: " + player.getVolume());
-                    System.out.println("set volume level to: " + volumeSet);
-                    Platform.runLater(() -> {
-                        player.setVolume(volumeSet);
+
+                    Platform.runLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            player.setVolume(volumeSet);
+                            System.out.println("player volume: " + player.getVolume());
+                            System.out.println("set volume level to: " + volumeSet);
+                        }
                     });
                 }
             }
@@ -513,6 +473,14 @@ public class Controller {
             }
         });
 
+        //todo: nachvollziehen einzige lambda
+        playingTableView.setOnKeyPressed(new EventHandler<KeyEvent>() {
+            @Override
+            public void handle(KeyEvent keyEvent) {
+                //xyz
+            }
+        });
+
         playingTableView.setOnKeyPressed(keyEvent -> {
             if (playingTableView.getSelectionModel().getSelectedItem() == null) {
                 System.out.println(">playingTableView: No song selected, exiting Eventhandler...");
@@ -570,56 +538,97 @@ public class Controller {
 
 // - - - - - - - - - - - - - - - - - - - - - - TableView Start - - - - - - - - - - - - - - - - - - - - - -
     //Select TreeView Item Logic
-        @FXML
-        private void selectTreeItem(MouseEvent event) {
+//Determine if the click was on a TreeCell
 
-        //Determine if the click was on a TreeCell
-        Node clickedNode = event.getPickResult().getIntersectedNode();
-        while (clickedNode != null && !(clickedNode instanceof TreeCell<?>)) {
-            clickedNode = clickedNode.getParent();
-        }
+//File[] files = folder.listFiles(new java.io.FilenameFilter() {
+//    @Override
+//    public boolean accept(File _file, String str) {
+//        return str.toLowerCase().endsWith(".mp3");
+//    }
+//});
+    //Ich verstehe. Ich wiederhole dann meine Liste mit dem neuen Verständnis. Lass mich wissen, ob dies in jeder Hinsicht korrekt ist:
+//1) You instantiate a Task object. In <> behind Task is the return type specified. If the task has no return, the type is Void.
+//2) A return type is important is the process within the task results in some value which is needed outside the task
+//3) An implementation of Task also always requires @overriding the call()-method. By default, it does nothing and has no return value.
+//4) The implementation of the call method is given the same return type as the initial Task. So Void if it's <void>, ObservableList<file> if it's <ObservableList<file>>.</file></file></void>
+//5) After this point, the individual code or logic can be entered which is to be run inside the task (or the call-method, rather)
+//6) At the end of the call-method, the specified return type needs to be returned. null if it's void.
+//7) Once call is closed, Task is closed as well, the Task itself is fully implemented at this point.
+//8) In order to use the return value, there are two requirements:
+//1. The task needs to be actually run by creating and initializing a Thread with the task instance. This creates a single thread which runs the code specified in the call() method.
+//2. Whatever return value has resulted from the task, should be used within the task.setOnSucceeded(){ - code-block. This ensures that the task has fully loaded and completed its course before the code requiring the return value is executed.
+//
+//9) If all is correct so far, please help me understand the lambda in the last part of setOnSucceeded. Can you help me by displaying how it looks without Lambda, and show me the differences?
+@FXML
+private void selectTreeItem(MouseEvent event) {
+    TreeItem<File> selectedItem = folderTreeView.getSelectionModel().getSelectedItem();
+    centerList.clear();
 
-        TreeItem<File> selectedItem = folderTreeView.getSelectionModel().getSelectedItem();
-        centerList.clear();
+    if (selectedItem != null) {
+        File folder = selectedItem.getValue();
+        System.out.println("Selected: " + folder);
 
-        if (selectedItem != null) {
-            File folder = selectedItem.getValue();
-            System.out.println("Selected: " + folder);
+        if (folder.isDirectory()) {
+            Task<ObservableList<Song>> task = new Task<>() {
+                @Override
+                protected ObservableList<Song> call() {
+                    ObservableList<Song> songs = FXCollections.observableArrayList();
+                    File[] files = folder.listFiles(new FilenameFilter() {
+                        @Override
+                        public boolean accept(File dir, String name) {
+                            return name.toLowerCase().endsWith(".mp3");
+                        }
+                    });
 
-            if (folder.isDirectory()) {
-                File[] files = folder.listFiles((_file, str) -> str.toLowerCase().endsWith(".mp3"));
-                //File[] files = folder.listFiles(new java.io.FilenameFilter() {
-                //    @Override
-                //    public boolean accept(File _file, String str) {
-                //        return str.toLowerCase().endsWith(".mp3");
-                //    }
-                //});
-                mp3FileMetadataExtractor = new MP3FileMetadataExtractor();
-                if (files != null) {
-                    centerList.clear();
-                    Song[] songArray = new Song[files.length];
-                    for (int i = 0; i < files.length; i++) {
-                        songArray[i] = new Song(files[i].getAbsolutePath(), new HashMap<>());
-                        System.out.println("Absolute Path used in Song construction=" + files[i].getAbsolutePath() + ", along with empty HashMap, to be filled later");
+                    if (files != null) {
+                        MP3FileMetadataExtractor extractor = new MP3FileMetadataExtractor();
+                        Song[] songArray = new Song[files.length];
+
+                        for (int i = 0; i < files.length; i++) {
+                            songArray[i] = new Song(files[i].getAbsolutePath(), new HashMap<>());
+                        }
+                        extractor.extractTagFromMp3(songArray);
+
+                        for (var s : songArray) {
+                            songs.add(s);
+                        }
                     }
-                    mp3FileMetadataExtractor.extractTagFromMp3(songArray);
-
-                    for (var s : songArray) {
-                        centerList.add(s);
-                        System.out.println("Added songs to centerList: " + s.getTitle());
-                    }
+                    return songs;
                 }
-            } else {
-                System.out.println("Not a directory");
-            }
-        } else {
-            System.out.println("Invalid selection");
-        }
+            };
 
-        // Update TableView with Song list.
-        centerTableView.setItems(centerList);
-        //System.out.println("Added to TableView centerList: "+centerList);;
+            // Führt Aktionen aus, wenn der Task erfolgreich abgeschlossen wurde.
+            //"WorkerStateEvents" reagieren auf den Status von Hintergrundprozessen. z.B. SUCCEEDED, FAILED, CANCELLED
+            task.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
+                @Override
+                public void handle(WorkerStateEvent workerStateEvent) {
+                    // Aktualisiert die `centerList` mit den geladenen Songs.
+                    centerList.setAll(task.getValue());
+                    // Setzt die aktualisierte Liste in die TableView.
+                    centerTableView.setItems(centerList);
+                    System.out.println("TableView updated with songs.");
+                }
+            });
+
+            // registriert fehlerhafte Task-Ausführung.
+          task.setOnFailed(new EventHandler<WorkerStateEvent>() {
+              @Override
+              public void handle(WorkerStateEvent workerStateEvent){
+                  System.err.println("Error during background task: " + task.getException().getMessage());
+              }
+          });
+
+            // Startet den Task in einem separaten Thread.
+            Thread thread = new Thread(task);
+            thread.setDaemon(true); // Falls Anwendung abgebrochen wird, wird Thread beendet.
+            thread.start();
+        } else {
+            System.out.println("Not a directory");
+        }
+    } else {
+        System.out.println("Invalid selection");
     }
+}
 
     private void addToQueue() {
         selectedSong = centerTableView.getSelectionModel().getSelectedItem();
@@ -682,34 +691,53 @@ public class Controller {
         }
     }
 
-    //todo: add time remaining on right-hand label
+
     private void setProgressBar() {
-        player.currentTimeProperty().addListener((observable, oldValue, newValue) -> {
-            double offset = 0.03; // 3%
-            double currentTime = newValue.toSeconds();
-            double totalDuration = player.getTotalDuration().toSeconds();
+        player.currentTimeProperty().addListener(new ChangeListener<Duration>() {
+            @Override
+            public void changed(ObservableValue<? extends Duration> observableValue, Duration oldValue, Duration newValue) {
+                //System.out.println("setProgressBar is JavaFX thread="+Platform.isFxApplicationThread());
+                //observable = player.currentTimeProperty(). oldValue vor, newValue nach der Änderung = currentTime
 
-            //double progress = currentTime / totalDuration;
-            double progress = (currentTime / totalDuration) * (1 - offset) + offset;
+                double offset = 0.03; // 3%
+                double currentTime = newValue.toSeconds();
+                double totalDuration = player.getTotalDuration().toSeconds();
 
-            progressBar.setProgress(progress);
+                //double progress = currentTime / totalDuration;
+                double progress = (currentTime / totalDuration) * (1 - offset) + offset;
+
+                progressBar.setProgress(progress);
 
 //hours erstellt 1 3600stel, zählt im Laufe einer Stunde hoch bis 3600
 //minutes und seconds arbeiten mit Modulo, um Breakpoints zu gewährleisten.
 // Bei genau 60 Sekunden stehen seconds auf 0 und es ist stattdessen 1 minute.
 // Ebenso ist es bei genau 3600 Sekunden (60 Minuten) eine Stunde, und Minuten stehen auf 0
-            int hours = (int) currentTime / 3600;
-            int minutes = (int) (currentTime % 3600) / 60;
-            int seconds = (int) currentTime % 60;
+                int hours = (int) currentTime / 3600;
+                int minutes = (int) (currentTime % 3600) / 60;
+                int seconds = (int) currentTime % 60;
+
+                int remainingTime = (int) totalDuration - (int) currentTime;
+                int hours2 = remainingTime / 3600;
+                int minutes2 = (remainingTime % 3600) / 60;
+                int seconds2 = remainingTime % 60;
 
 //String.format method: % specifies start of format; d decimal integer.
 //02: 0 means to pad with leading zeroes if necessary. 2 is the width of the number
-            String timeString = (hours > 0)
-                    ? String.format("%d:%02d:%02d", hours, minutes, seconds)
-                    : String.format("%02d:%02d", minutes, seconds);
-            Platform.runLater(() -> {
-                barTimer.setText(timeString);
-            });
+                String timeString = (hours > 0)
+                        ? String.format("%d:%02d:%02d", hours, minutes, seconds)
+                        : String.format("%02d:%02d", minutes, seconds);
+                String timeRemainingString = (hours2 > 0)
+                        ? String.format("%d:%02d:%02d", hours2, minutes2, seconds2)
+                        : String.format("%02d:%02d", minutes2, seconds2);
+
+                Platform.runLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        barTimer.setText(timeString);
+                        barRemainingTimer.setText(timeRemainingString);
+                    }
+                });
+            }
         });
     }
 
@@ -719,12 +747,15 @@ public class Controller {
             return;
         }
 
-        player.statusProperty().addListener((observable, oldStatus, newStatus) -> {
-            if (newStatus == MediaPlayer.Status.PLAYING) {
-                playButtonLabel.setText("⏸"); // \u23F8
-            }
-            if (newStatus == MediaPlayer.Status.STOPPED || newStatus == MediaPlayer.Status.PAUSED) {
-                playButtonLabel.setText("▶"); // \u25B6
+        player.statusProperty().addListener(new ChangeListener<MediaPlayer.Status>() {
+            @Override
+            public void changed(ObservableValue<? extends MediaPlayer.Status> observableValue, MediaPlayer.Status oldStatus, MediaPlayer.Status newStatus) {
+                if (newStatus == MediaPlayer.Status.PLAYING) {
+                        playButtonLabel.setText("⏸"); // \u23F8
+                }
+                if (newStatus == MediaPlayer.Status.STOPPED || newStatus == MediaPlayer.Status.PAUSED) {
+                        playButtonLabel.setText("▶"); // \u25B6
+                }
             }
         });
     }
@@ -735,32 +766,41 @@ public class Controller {
 
     private void styleCurrentSong() {
         Song styleSong = currentQueue.get(countingIndex);
-        centerTableView.setRowFactory(tview -> new TableRow<>() {
+        centerTableView.setRowFactory(new Callback<TableView<Song>, TableRow<Song>>() {
             @Override
-            protected void updateItem(Song item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setStyle("");
-                } else if (item.equals(styleSong)) {
-                    setStyle("-fx-font-weight: bold;");
-                } else {
-                    setStyle("");
-                }
+            public TableRow<Song> call(TableView<Song> tview) {
+                return new TableRow<>() {
+                    @Override
+                    protected void updateItem(Song item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (empty || item == null) {
+                            setStyle("");
+                        } else if (item.equals(styleSong)) {
+                            setStyle("-fx-font-weight: bold;");
+                        } else {
+                            setStyle("");
+                        }
+                    }
+                };
             }
         });
 
-        playingTableView.setRowFactory(tview -> new TableRow<>() {
+        playingTableView.setRowFactory(new Callback<TableView<Song>, TableRow<Song>>() {
             @Override
-            protected void updateItem(Song item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setStyle("");
-                } else if (item.equals(styleSong)) {
-                    setStyle("-fx-font-weight: bold;");
-                } else {
-                    setStyle("");
-                }
-                //...
+            public TableRow<Song> call(TableView<Song> tview) {
+                return new TableRow<>() {
+                    @Override
+                    protected void updateItem(Song item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (empty || item == null) {
+                            setStyle("");
+                        } else if (item.equals(styleSong)) {
+                            setStyle("-fx-font-weight: bold;");
+                        } else {
+                            setStyle("");
+                        }
+                    }
+                };
             }
         });
 
@@ -784,13 +824,15 @@ public class Controller {
             return;
         }
 
-        player.setOnEndOfMedia(() -> {
-            System.out.println("endOfMedia triggered by method playerBehavior();");
-            progressBar.setProgress(0);
-            playNextOrStop();
+        player.setOnEndOfMedia(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("endOfMedia triggered by method playerBehavior();");
+                progressBar.setProgress(0);
+                playNextOrStop();
+            }
         });
     }
-
 // - - - - - - - - - - - - - - - - - - - - - Player Behavior Ende - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // - - - - - - - - - - - - - - - - - - - - - Playback Start - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -917,10 +959,10 @@ public class Controller {
             countingIndex -= 1;
             initiatePlay();
             player.play();
-            System.out.println("Playing: " + previousSong.getTitle());
+            System.out.println("Playing previous Index: " + previousSong.getTitle());
         } else {
             player.seek(Duration.ZERO);
-            System.err.println("Setting playback to 0.");
+            System.err.println("No prior index found, setting playback to 0.");
         }
     }
 
@@ -935,7 +977,6 @@ public class Controller {
             return;
         }
         Media newPlayback = songToMedia(selectedSong);
-
         player = new MediaPlayer(newPlayback);
         currentQueue = queue.getQueue();
         System.out.println("Playing after double click or enter press newPlayBack: " + newPlayback + ", which is the same as selectedSong.getTitle(): " + selectedSong.getTitle());
@@ -1062,8 +1103,13 @@ public class Controller {
 
     @FXML
     private void handleRefresh() {
-        //...
+
     }
+
+
+
+
+
 
     //Parser-Methode
     private Media songToMedia(Song song) {
@@ -1073,4 +1119,24 @@ public class Controller {
         return new Media(new File(song.getPath()).toURI().toString());
     }
 
+    private void createTree(File file, TreeItem<File> parentItem, int depth, int maxDepth) {
+        if (depth > maxDepth){
+            System.out.println("Endlosschleife oder zu tiefe Ordnerverzweigung: Maximale Rekursionstiefe erreicht.");
+            return;
+        }
+        File[] files = file.listFiles();
+            for (var f : files) {
+                if (containsMP3Files(f)) {
+                    TreeItem<File> treeItem = new TreeItem<>(f);
+                    parentItem.getChildren().add(treeItem);
+                    createTree(f, treeItem, depth + 1, maxDepth);
+                    loopCount++;
+                    System.out.println("Scanned: " + loopCount);
+                }
+            }
+    }
 }
+
+
+
+

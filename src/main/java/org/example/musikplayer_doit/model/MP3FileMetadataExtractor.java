@@ -29,9 +29,8 @@ public class MP3FileMetadataExtractor {
                     //s.addMetadata("Title", tag.getFirst(FieldKey.TITLE));
                     s.addMetadata("Artist", tag.getFirst(FieldKey.ARTIST));
                     s.addMetadata("Genre", tag.getFirst(FieldKey.GENRE));
-                    if (audioFile.getAudioHeader() != null){
-                        s.addMetadata("Length", String.valueOf(audioFile.getAudioHeader().getTrackLength()));
-                    }
+                    s.addMetadata("Length", String.valueOf(audioFile.getAudioHeader().getTrackLength()));
+
 
                     System.out.println("Scanned metadata for file" + s.getPath()+"\nMetadata scanned: "+
                             tag.getFirst(FieldKey.ALBUM)
