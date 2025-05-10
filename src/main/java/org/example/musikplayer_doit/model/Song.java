@@ -1,3 +1,6 @@
+//todo: class Cache oder im Model?
+//todo: Sqlite auch für persistente Config Einstellungen nutzen
+//todo: (much later) use getName() + hash value for song construction. If hash already exists, update file path. if not, create new song file with name and hash value. Prevents duplicate entries
 package org.example.musikplayer_doit.model;
 
 import java.io.File;
@@ -6,12 +9,11 @@ import java.util.Map;
 
 public class Song {
 
-    //todo: class Cache oder im Model?
-    //todo: Sqlite auch für persistente Config Einstellungen nutzen
-    ///In einer Version 2.0 müsste man vermutlich für title das korrente Metadaten-Feld nutzen
+    //
     private String title;
     private File file;
     private String path;
+    private String genre;
     private String album;
     private String artist;
     private Map<String, Object> metadata;
@@ -19,10 +21,10 @@ public class Song {
 
     public Song (String filePath, Map<String, Object> metadata){
         this.file = new File(filePath);
-    this.title = file.getName();
-    this.path = filePath;
+        this.title = file.getName();
+        this.path = filePath;
 
-}
+    }
 
     public String getTitle() {
         return title;
@@ -73,7 +75,7 @@ public class Song {
             return metadata.get("Genre").toString();
         }
 
-        return "Unbekanntes Album";
+        return "Unbekanntes Genre";
     }
 
     public String getLength() {

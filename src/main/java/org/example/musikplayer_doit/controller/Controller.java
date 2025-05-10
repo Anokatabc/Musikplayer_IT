@@ -2,21 +2,12 @@
 //todo: drag & drop songs
 //todo: mute togglebutton left of Slider
 //todo: public private nochmal genau anschauen, was und warum setzt man sie?
-// falls mit Datenbank, Dump im Zip mitschicken.
-//note: JFoenixSlider / JFXSlider für .filled-track / .colored-track Eigenschaft
-//debugging thread: Thread.currentThread().getName()
-//// oder Platform.isFxApplicationThread()
-
-// - - - - - - - - - - - - - - - - - - - - - Controller Aufbau: - - - - - - - - - - - - - - - - - - - - - - - - -
-// - - - - - - - - - - - - - - - - - - - - - initialize Start - - - - - - - - - - - - - - - - - - - - - - - - -
-// - - - - - - - - - - - - - - - - - - - - - - Initialize Ende - - - - - - - - - - - - - - - - - - - - - -
-// - - - - - - - - - - - - - - - - - - - - - - TableView Start - - - - - - - - - - - - - - - - - - - - - -
-// - - - - - - - - - - - - - - - - - - - - - - TableView Ende - - - - - - - - - - - - - - - - - - - - - -
-// - - - - - - - - - - - - - - - - - - - - - Player Behavior Start - - - - - - - - - - - - - - - - - - - - - - - - -
-// - - - - - - - - - - - - - - - - - - - - - Player Behavior Ende - - - - - - - - - - - - - - - - - - - - - - - - -
-// - - - - - - - - - - - - - - - - - - - - - Playback Start - - - - - - - - - - - - - - - - - - - - - - - - -
-// - - - - - - - - - - - - - - - - - - - - - Playback Ende - - - - - - - - - - - - - - - - - - - - - - - - -
-
+//todo: Volume Slider stylen ein Stück weit wie ProgressBar.
+//todo: nachvollziehen einzige lambda
+//todo: ProgressBar anklickbar machen und Lied zur Stelle vorspulen
+//todo: kleine Popups bei Mouseover: ProgressBar Minute:Sekunde, über TableColumn gesamter Inhalt, ebenso über TreeItem.
+//todo: allow multiple selection during ctrl-click, probably redesign method with array for selection
+//todo: idee: während drag auf ProgressBar per Tastendruck (oder drag out of bounds?) Tonspur anzeigen lassen
 package org.example.musikplayer_doit.controller;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -24,7 +15,6 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
-import javafx.concurrent.Worker;
 import javafx.concurrent.WorkerStateEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -44,6 +34,7 @@ import javafx.util.Duration;
 import org.example.musikplayer_doit.model.MP3FileMetadataExtractor;
 import org.example.musikplayer_doit.model.Playlist;
 import org.example.musikplayer_doit.model.Song;
+import org.w3c.dom.ls.LSOutput;
 
 import java.io.File;
 import java.io.FilenameFilter;
@@ -51,6 +42,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 
 public class Controller {
+
+    /// Vorsicht mit Updates, irgendeine JavaFX Bibliothek ist veraltet und darf nicht geupdated werden.
 
     @FXML
     TreeView<File> folderTreeView;
@@ -67,6 +60,8 @@ public class Controller {
     TableColumn<Song, String> pathColumn;
     @FXML
     TableColumn<Song, String> artistColumn;
+    @FXML
+    TableColumn<Song, String> genreColumn;
 
     @FXML
     TableColumn<Song, String> lengthColumn;
@@ -96,12 +91,19 @@ public class Controller {
     @FXML
     ToggleButton repeatQueueButton;
 
+    //Dient dazu den Fokus von VolumeSlider wegzunehmen und wiederherzustellen
     private Node previousFocus;
+    //Als Ausgabe während TreeView-Erstellung
     private int loopCount;
+    //Als Ausgabe der Ladezeit der TreeView-Erstellung
     private long startTime;
+    //Dient Synchronisierung zwischen Player und Liste
     private int countingIndex;
+    //Dient unmittelbarer Auswahl von Medien
     private Song selectedSong;
+    //Mehr oder weniger veraltet. Restnutzungen können größtenteils durch countingIndex ersetzt werden
     private Song currentSong;
+    //Eingestellte Werte durch die ToggleButtons
     private boolean autoPlay = true;
     private boolean repeatQueue;
 
@@ -114,8 +116,8 @@ public class Controller {
 
     // - - - - - - - - - - - - - - - - - - - - - initialize Start - - - - - - - - - - - - - - - - - - - - - - - - -
 
+    //Initialisiert alle grundlegenden Werte des Programms
     public void initialize() {
-        System.setProperty("javafx.css.debug", "true");
         initializeTreeView();
         applyCellFactory();
         trackBorderPaneFocus();
@@ -127,11 +129,13 @@ public class Controller {
         initializePlayingTableViewListener();
         initializeButtonListener();
 
+        //Vermutlich nicht notwendig
         centerTableView.requestFocus();
 
         // Initialize Queue
         queue = new Playlist();
 
+        //CellValueFactories noch nicht ausgelasgert
         queueTitleColumn.setCellValueFactory(new PropertyValueFactory<>("title"));
         queueLengthColumn.setCellValueFactory(new PropertyValueFactory<>("length"));
         titleColumn.setCellValueFactory(new PropertyValueFactory<>("title"));
@@ -139,6 +143,7 @@ public class Controller {
         albumColumn.setCellValueFactory(new PropertyValueFactory<>("album"));
         lengthColumn.setCellValueFactory(new PropertyValueFactory<>("length"));
         artistColumn.setCellValueFactory(new PropertyValueFactory<>("artist"));
+        genreColumn.setCellValueFactory(new PropertyValueFactory<>("genre"));
     }
 
     private void initializeTreeView() {
@@ -174,29 +179,24 @@ public class Controller {
                     return null;
                 }
             };
+            //WorkerStateEvents reagieren auf Statusmeldungen von Hintergrundthreads, hier "SUCCEEDED"
             task.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
                 @Override
                 public void handle(WorkerStateEvent workerStateEvent) {
                     System.out.println("Task abgeschlossen: Alle Verzeichnisse gescannt für Festplatten: " + Arrays.toString(File.listRoots()));
                     folderTreeView.setMouseTransparent(false);
                     folderTreeView.setOpacity(1);
+                    cleanup();
                 }
             });
             Thread thread = new Thread(task);
-            thread.setDaemon(true); // Beendet den Thread, wenn die Anwendung geschlossen wird
+            thread.setDaemon(true); // Beendet den Thread, wenn die Anwendung vorzeitig geschlossen wird
             thread.start();
         }
     }
 
-    //bricht aktuell Scan ab, wenn Überordner keine mp3-Dateien enthält, auch wenn Unterordner welche enthält.
+    //Zu verbessern: bricht aktuell Scan ab, wenn Überordner keine mp3-Dateien enthält, auch wenn Unterordner welche enthält.
 
-
-  //  private boolean containsMP3Files(File directory) {
-//        if (directory.isDirectory()) {
-//            File[] checkMP3File = directory.listFiles((dir, name) -> name.toLowerCase().endsWith(".mp3"));
-//            return checkMP3File != null && checkMP3File.length > 0;
-//        }
-//        return false;
     private boolean containsMP3Files(File directory) {
         if (directory.isDirectory()) {
             File[] checkMP3File = directory.listFiles(new FilenameFilter() {
@@ -210,7 +210,34 @@ public class Controller {
         return false;
     }
 
-    //Cellfactory customizes rendering of cells in a ListView, TableView, TreeView
+    private void createTree(File file, TreeItem<File> parentItem, int depth, int maxDepth) {
+        if (depth > maxDepth){
+            System.out.println("Endlosschleife oder zu tiefe Ordnerverzweigung: Maximale Rekursionstiefe erreicht.");
+            return;
+        }
+        File[] files = file.listFiles();
+        for (var f : files) {
+            if (containsMP3Files(f)) {
+                TreeItem<File> treeItem = new TreeItem<>(f);
+                parentItem.getChildren().add(treeItem);
+                createTree(f, treeItem, depth + 1, maxDepth);
+                loopCount++;
+                System.out.println("Scanned: " + loopCount);
+            }
+        }
+    }
+
+    //Cellfactory customizes default rendering of cells in a ListView, TableView, TreeView
+    //item und empty werden von JavaFX vorgegeben
+    //setRowFactory nimmt Callback an, welcher eine TableRow erstellt.
+    // -> TableView Eingabe, TableRow Ausgabe => new TableRow.
+    // heißt: tview -> (wird zu) new TableRow<>() { ... (Körperinhalt der anonymen Klasse = was überschrieben wird.
+
+    //Mit anderen Worten: Man möchte sich die Methode updateItem zunutze machen, um die Zelle mit neuen Eigenschaften zu aktualisieren.
+    // Damit möchte man aber nicht alle Basiseigenschaften überschreiben, sondern nur die einzelnen Aspekte, die man im Körper der
+    // neuen anonymen Klasse definiert. Zum Beispiel hier möchte man nur den Style setzen, und den Rest der Eigenschaften unangetastet
+    // lassen. Darum wird die nächste valide Implementierung der Methode in einer Elternklasse aufgerufen, um diese Kernfunktionen zu
+    // gewährleisten.
     private void applyCellFactory() {
         folderTreeView.setCellFactory(new Callback<TreeView<File>, TreeCell<File>>() {
             @Override
@@ -247,7 +274,7 @@ public class Controller {
                     newScene.focusOwnerProperty().addListener(new ChangeListener<Node>() {
                         @Override
                         public void changed(ObservableValue<? extends Node> observableValue, Node oldFocus, Node newFocus) {
-                            if (newFocus != volumeSlider) { // Speichere den Fokus, wenn es nicht der Slider ist
+                            if (newFocus != volumeSlider) {
                                 previousFocus = newFocus;
                             }
                         }
@@ -257,6 +284,7 @@ public class Controller {
         });
     }
 
+    //Leert die aktuelle Auswahl, wenn außerhalb einer Song-Zeile geklickt wid
     private void centerTableViewClearHandler() {
         centerTableView.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
             @Override
@@ -264,7 +292,7 @@ public class Controller {
                 Node clickedNode = event.getPickResult().getIntersectedNode();
                 System.out.println(">c.TableV.ClearH,> Clicked node: " + clickedNode);
 
-                // Traverse the node hierarchy to find the TableRow
+                // Traversing node hierarchy to find the TableRow
                 while (clickedNode != null && !(clickedNode instanceof TableRow)) {
                     clickedNode = clickedNode.getParent();
                 }
@@ -285,6 +313,7 @@ public class Controller {
         });
     }
 
+    //Leert die aktuelle Auswahl, wenn außerhalb einer Song-Zeile geklickt wird
     private void playingTableViewClearHandler() {
         playingTableView.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
             @Override
@@ -312,13 +341,14 @@ public class Controller {
         });
     }
 
+    //Grundwerte für den Volume Slider
     private void initializeVolumeSlider() {
         volumeSlider.setMin(0);
         volumeSlider.setMax(1);
         volumeSlider.setValue(0.2);
     }
 
-    //todo: Volume Slider stylen ein Stück weit wie ProgressBar.
+    //Vermittelt zwischen Volume Slider und Player
     @FXML
     private void handleVolumeSlider() {
         //volumeSlider.minProperty().setValue(0);
@@ -329,6 +359,7 @@ public class Controller {
         }
         volumeSlider.addEventFilter(ScrollEvent.SCROLL, scrollEvent -> {
             //System.out.println("handleVolumeSlider is JavaFX thread="+Platform.isFxApplicationThread());
+            //Bestimmt Richtung des Volume Sliders basierend auf Mausrad auf/ab
             double delta = scrollEvent.getDeltaY() > 0 ? 0.05 : -0.05;
 //                 Kurzschreibweise für:
 //                 double delta = scrollEvent.getDeltaY();
@@ -339,6 +370,7 @@ public class Controller {
 //                 }
             double previousVolume = volumeSlider.getValue();
             double newVolume = previousVolume + delta;
+            //Steuert von einem Hintergrundthread den JavaFX Main Thread an
             Platform.runLater(new Runnable() {
                 @Override
                 public void run() {
@@ -363,7 +395,7 @@ public class Controller {
 
 
                 if (player != null) {
-
+                    //Steuert von einem Hintergrundthread den JavaFX Main Thread an
                     Platform.runLater(new Runnable() {
                         @Override
                         public void run() {
@@ -377,6 +409,7 @@ public class Controller {
         });
     }
 
+    //Initialisiert Listener für die TableView
     private void initializeCenterTableViewListener() {
         //----------MouseEvents----------
         centerTableView.setOnMouseClicked(event -> {
@@ -449,6 +482,7 @@ public class Controller {
         });
     }
 
+    //Initialisiert Listener für die Queue (TableView)
     private void initializePlayingTableViewListener() {
         playingTableView.setOnMouseClicked(event -> {
             Node clickedNode = event.getPickResult().getIntersectedNode();
@@ -473,7 +507,6 @@ public class Controller {
             }
         });
 
-        //todo: nachvollziehen einzige lambda
         playingTableView.setOnKeyPressed(new EventHandler<KeyEvent>() {
             @Override
             public void handle(KeyEvent keyEvent) {
@@ -507,6 +540,7 @@ public class Controller {
         });
     }
 
+    //Initialisiert Listener für die Buttons
     private void initializeButtonListener() {
         autoPlayButton.selectedProperty().addListener(new ChangeListener<Boolean>() {
             @Override
@@ -536,100 +570,80 @@ public class Controller {
 
 // - - - - - - - - - - - - - - - - - - - - - - Initialize Ende - - - - - - - - - - - - - - - - - - - - - -
 
-// - - - - - - - - - - - - - - - - - - - - - - TableView Start - - - - - - - - - - - - - - - - - - - - - -
-    //Select TreeView Item Logic
-//Determine if the click was on a TreeCell
+    // - - - - - - - - - - - - - - - - - - - - - - TableView Start - - - - - - - - - - - - - - - - - - - - - -
+//Füllt TableView nach Klick auf TreeItem
+    @FXML
+    private void selectTreeItem(MouseEvent event) {
+        TreeItem<File> selectedItem = folderTreeView.getSelectionModel().getSelectedItem();
+        centerList.clear();
 
-//File[] files = folder.listFiles(new java.io.FilenameFilter() {
-//    @Override
-//    public boolean accept(File _file, String str) {
-//        return str.toLowerCase().endsWith(".mp3");
-//    }
-//});
-    //Ich verstehe. Ich wiederhole dann meine Liste mit dem neuen Verständnis. Lass mich wissen, ob dies in jeder Hinsicht korrekt ist:
-//1) You instantiate a Task object. In <> behind Task is the return type specified. If the task has no return, the type is Void.
-//2) A return type is important is the process within the task results in some value which is needed outside the task
-//3) An implementation of Task also always requires @overriding the call()-method. By default, it does nothing and has no return value.
-//4) The implementation of the call method is given the same return type as the initial Task. So Void if it's <void>, ObservableList<file> if it's <ObservableList<file>>.</file></file></void>
-//5) After this point, the individual code or logic can be entered which is to be run inside the task (or the call-method, rather)
-//6) At the end of the call-method, the specified return type needs to be returned. null if it's void.
-//7) Once call is closed, Task is closed as well, the Task itself is fully implemented at this point.
-//8) In order to use the return value, there are two requirements:
-//1. The task needs to be actually run by creating and initializing a Thread with the task instance. This creates a single thread which runs the code specified in the call() method.
-//2. Whatever return value has resulted from the task, should be used within the task.setOnSucceeded(){ - code-block. This ensures that the task has fully loaded and completed its course before the code requiring the return value is executed.
-//
-//9) If all is correct so far, please help me understand the lambda in the last part of setOnSucceeded. Can you help me by displaying how it looks without Lambda, and show me the differences?
-@FXML
-private void selectTreeItem(MouseEvent event) {
-    TreeItem<File> selectedItem = folderTreeView.getSelectionModel().getSelectedItem();
-    centerList.clear();
+        if (selectedItem != null) {
+            File folder = selectedItem.getValue();
+            System.out.println("Selected: " + folder);
 
-    if (selectedItem != null) {
-        File folder = selectedItem.getValue();
-        System.out.println("Selected: " + folder);
+            if (folder.isDirectory()) {
+                Task<ObservableList<Song>> task = new Task<>() {
+                    @Override
+                    protected ObservableList<Song> call() {
+                        ObservableList<Song> songs = FXCollections.observableArrayList();
+                        File[] files = folder.listFiles(new FilenameFilter() {
+                            @Override
+                            public boolean accept(File dir, String name) {
+                                return name.toLowerCase().endsWith(".mp3");
+                            }
+                        });
 
-        if (folder.isDirectory()) {
-            Task<ObservableList<Song>> task = new Task<>() {
-                @Override
-                protected ObservableList<Song> call() {
-                    ObservableList<Song> songs = FXCollections.observableArrayList();
-                    File[] files = folder.listFiles(new FilenameFilter() {
-                        @Override
-                        public boolean accept(File dir, String name) {
-                            return name.toLowerCase().endsWith(".mp3");
+                        if (files != null) {
+                            mp3FileMetadataExtractor = new MP3FileMetadataExtractor();
+                            Song[] songArray = new Song[files.length];
+
+                            for (int i = 0; i < files.length; i++) {
+                                songArray[i] = new Song(files[i].getAbsolutePath(), new HashMap<>());
+                            }
+                            mp3FileMetadataExtractor.extractTagFromMp3(songArray);
+
+                            for (var s : songArray) {
+                                songs.add(s);
+                            }
                         }
-                    });
-
-                    if (files != null) {
-                        MP3FileMetadataExtractor extractor = new MP3FileMetadataExtractor();
-                        Song[] songArray = new Song[files.length];
-
-                        for (int i = 0; i < files.length; i++) {
-                            songArray[i] = new Song(files[i].getAbsolutePath(), new HashMap<>());
-                        }
-                        extractor.extractTagFromMp3(songArray);
-
-                        for (var s : songArray) {
-                            songs.add(s);
-                        }
+                        return songs;
                     }
-                    return songs;
-                }
-            };
+                };
 
-            // Führt Aktionen aus, wenn der Task erfolgreich abgeschlossen wurde.
-            //"WorkerStateEvents" reagieren auf den Status von Hintergrundprozessen. z.B. SUCCEEDED, FAILED, CANCELLED
-            task.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
-                @Override
-                public void handle(WorkerStateEvent workerStateEvent) {
-                    // Aktualisiert die `centerList` mit den geladenen Songs.
-                    centerList.setAll(task.getValue());
-                    // Setzt die aktualisierte Liste in die TableView.
-                    centerTableView.setItems(centerList);
-                    System.out.println("TableView updated with songs.");
-                }
-            });
+                // Führt Aktionen aus, wenn der Task erfolgreich abgeschlossen wurde.
+                //"WorkerStateEvents" reagieren auf den Status von Hintergrundprozessen. z.B. SUCCEEDED, FAILED, CANCELLED
+                task.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
+                    @Override
+                    public void handle(WorkerStateEvent workerStateEvent) {
+                        // Aktualisiert die `centerList` mit den geladenen Songs.
+                        centerList.setAll(task.getValue());
+                        // Setzt die aktualisierte Liste in die TableView.
+                        centerTableView.setItems(centerList);
+                        System.out.println("TableView updated with songs.");
+                    }
+                });
 
-            // registriert fehlerhafte Task-Ausführung.
-          task.setOnFailed(new EventHandler<WorkerStateEvent>() {
-              @Override
-              public void handle(WorkerStateEvent workerStateEvent){
-                  System.err.println("Error during background task: " + task.getException().getMessage());
-              }
-          });
+                // registriert fehlerhafte Task-Ausführung.
+                task.setOnFailed(new EventHandler<WorkerStateEvent>() {
+                    @Override
+                    public void handle(WorkerStateEvent workerStateEvent){
+                        System.err.println("Error during background task: " + task.getException().getMessage());
+                    }
+                });
 
-            // Startet den Task in einem separaten Thread.
-            Thread thread = new Thread(task);
-            thread.setDaemon(true); // Falls Anwendung abgebrochen wird, wird Thread beendet.
-            thread.start();
+                // Startet den Task in einem separaten Thread.
+                Thread thread = new Thread(task);
+                thread.setDaemon(true); // Falls Anwendung abgebrochen wird, wird Thread beendet.
+                thread.start();
+            } else {
+                System.out.println("Not a directory");
+            }
         } else {
-            System.out.println("Not a directory");
+            System.out.println("Invalid selection");
         }
-    } else {
-        System.out.println("Invalid selection");
     }
-}
 
+    //Listen-Methoden
     private void addToQueue() {
         selectedSong = centerTableView.getSelectionModel().getSelectedItem();
         queue.addSong(selectedSong);
@@ -637,21 +651,25 @@ private void selectTreeItem(MouseEvent event) {
     }
 
     private void deleteSongFromQueue() {
+        selectedSong = playingTableView.getSelectionModel().getSelectedItem();
+
+        if (selectedSong == null){
+            System.err.println("delete: No selected song detected");
+            return;
+        }
+
         int selectedSongIndex = currentQueue.indexOf(selectedSong);
-
-        if (selectedSongIndex < currentQueue.indexOf(currentQueue.getLast())) {
-            countingIndex -= 1;
-            System.out.println("countingIndex = " + countingIndex);
-        } else {
-            countingIndex = currentQueue.indexOf(currentQueue.getLast());
-            System.out.println("countingIndex set to last and only song in queue " + countingIndex);
-        }
-
-        if (selectedSong == currentSong) {
-            System.err.println("Warning: currentSong deleted, initializing countingIndex variable. countingIndex == " + countingIndex);
-        }
-
         queue.removeSong(selectedSong);
+
+        if (countingIndex == selectedSongIndex && countingIndex != 0){
+            countingIndex -= 1;
+        }
+        else if (countingIndex >= currentQueue.size()) {
+            countingIndex = currentQueue.size() - 1;
+        } else if (selectedSongIndex < countingIndex && countingIndex > 0) {
+            countingIndex--;
+        }
+
         System.out.println("Song successfully deleted from queue, countingIndex = " + countingIndex);
     }
 
@@ -659,8 +677,10 @@ private void selectTreeItem(MouseEvent event) {
 
 // - - - - - - - - - - - - - - - - - - - - - Player Behavior Start - - - - - - - - - - - - - - - - - - - - - - - - -
 
+    //"Interface"-Methode für Player-Synchronisierung. Muss mit jedem player.play() aufgerufen werden
     private void initiatePlay() {
         System.out.println("[[initiatePlay]]: Method called.");
+        System.out.println("currentQueue update: FX thread?"+Platform.isFxApplicationThread());
         currentQueue = queue.getQueue();
         setCurrentSong();
         setProgressBar();
@@ -671,7 +691,7 @@ private void selectTreeItem(MouseEvent event) {
         playerBehavior();
     }
 
-    //etwas veraltet und inkonsistent in der Anwendung
+    //etwas veraltet und inkonsistent in der Anwendung. Soll Listensynchronisierung dienen
     private void setCurrentSong() {
         System.out.println(">setCurrentSong: Method called");
         if (player == null || player.getMedia() == null) {
@@ -691,19 +711,18 @@ private void selectTreeItem(MouseEvent event) {
         }
     }
 
-
+    //Reguliert Progress Bar-Fortschritt. In der Zukunft optimierbar mit Hintergrundprozess und Timeline
     private void setProgressBar() {
         player.currentTimeProperty().addListener(new ChangeListener<Duration>() {
             @Override
             public void changed(ObservableValue<? extends Duration> observableValue, Duration oldValue, Duration newValue) {
                 //System.out.println("setProgressBar is JavaFX thread="+Platform.isFxApplicationThread());
-                //observable = player.currentTimeProperty(). oldValue vor, newValue nach der Änderung = currentTime
 
-                double offset = 0.03; // 3%
+                //Damit dem Nutzer direkt ein Progress angezeigt wird
+                double offset = 0.01; // 1%
                 double currentTime = newValue.toSeconds();
                 double totalDuration = player.getTotalDuration().toSeconds();
 
-                //double progress = currentTime / totalDuration;
                 double progress = (currentTime / totalDuration) * (1 - offset) + offset;
 
                 progressBar.setProgress(progress);
@@ -712,17 +731,19 @@ private void selectTreeItem(MouseEvent event) {
 //minutes und seconds arbeiten mit Modulo, um Breakpoints zu gewährleisten.
 // Bei genau 60 Sekunden stehen seconds auf 0 und es ist stattdessen 1 minute.
 // Ebenso ist es bei genau 3600 Sekunden (60 Minuten) eine Stunde, und Minuten stehen auf 0
+                //Linkes Label für verstrichene Zeit
                 int hours = (int) currentTime / 3600;
                 int minutes = (int) (currentTime % 3600) / 60;
                 int seconds = (int) currentTime % 60;
 
+                //Rechtes Label für verbleibende Zeit
                 int remainingTime = (int) totalDuration - (int) currentTime;
                 int hours2 = remainingTime / 3600;
                 int minutes2 = (remainingTime % 3600) / 60;
                 int seconds2 = remainingTime % 60;
 
-//String.format method: % specifies start of format; d decimal integer.
-//02: 0 means to pad with leading zeroes if necessary. 2 is the width of the number
+//String.format Methode: % gibt den Start eines Formats an; d Dezimalzahl.
+//02: 0 füllt eine führende 0 auf falls nötig. 2 bestimmt die Gesamtlänge der Zahl
                 String timeString = (hours > 0)
                         ? String.format("%d:%02d:%02d", hours, minutes, seconds)
                         : String.format("%02d:%02d", minutes, seconds);
@@ -730,6 +751,7 @@ private void selectTreeItem(MouseEvent event) {
                         ? String.format("%d:%02d:%02d", hours2, minutes2, seconds2)
                         : String.format("%02d:%02d", minutes2, seconds2);
 
+                //Steuert von einem Hintergrundthread den JavaFX Main Thread an
                 Platform.runLater(new Runnable() {
                     @Override
                     public void run() {
@@ -751,21 +773,25 @@ private void selectTreeItem(MouseEvent event) {
             @Override
             public void changed(ObservableValue<? extends MediaPlayer.Status> observableValue, MediaPlayer.Status oldStatus, MediaPlayer.Status newStatus) {
                 if (newStatus == MediaPlayer.Status.PLAYING) {
-                        playButtonLabel.setText("⏸"); // \u23F8
+                    playButtonLabel.setText("⏸"); // \u23F8
                 }
                 if (newStatus == MediaPlayer.Status.STOPPED || newStatus == MediaPlayer.Status.PAUSED) {
-                        playButtonLabel.setText("▶"); // \u25B6
+                    playButtonLabel.setText("▶"); // \u25B6
                 }
             }
         });
     }
 
+    //Lädt aktuellen Song als Text in die ProgressBar
     private void setProgressBarLabel() {
         progressBarLabel.setText(currentQueue.get(countingIndex).getTitle());
     }
 
+    //Druckt den aktuell spielenden Song fett in TableViews
     private void styleCurrentSong() {
+        System.out.println("style: counting="+countingIndex);
         Song styleSong = currentQueue.get(countingIndex);
+        centerTableView.refresh();
         centerTableView.setRowFactory(new Callback<TableView<Song>, TableRow<Song>>() {
             @Override
             public TableRow<Song> call(TableView<Song> tview) {
@@ -777,6 +803,7 @@ private void selectTreeItem(MouseEvent event) {
                             setStyle("");
                         } else if (item.equals(styleSong)) {
                             setStyle("-fx-font-weight: bold;");
+                            System.out.println("styleSong: Style current Song bold");
                         } else {
                             setStyle("");
                         }
@@ -785,6 +812,7 @@ private void selectTreeItem(MouseEvent event) {
             }
         });
 
+        playingTableView.refresh();
         playingTableView.setRowFactory(new Callback<TableView<Song>, TableRow<Song>>() {
             @Override
             public TableRow<Song> call(TableView<Song> tview) {
@@ -796,6 +824,7 @@ private void selectTreeItem(MouseEvent event) {
                             setStyle("");
                         } else if (item.equals(styleSong)) {
                             setStyle("-fx-font-weight: bold;");
+                            System.out.println("styleSong: Style current Song bold");
                         } else {
                             setStyle("");
                         }
@@ -803,21 +832,9 @@ private void selectTreeItem(MouseEvent event) {
                 };
             }
         });
-
-
-        //item und empty werden von JavaFX vorgegeben
-        //setRowFactory nimmt Callback an, welcher eine TableRow erstellt.
-        // -> TableView Eingabe, TableRow Ausgabe => new TableRow.
-        // heißt: tview -> (wird zu) new TableRow<>() { ... (Körperinhalt der anonymen Klasse = was überschrieben wird.
-
-        //Mit anderen Worten: Man möchte sich die Methode updateItem zunutze machen, um die Zelle mit neuen Eigenschaften zu aktualisieren.
-        // Damit möchte man aber nicht alle Basiseigenschaften überschreiben, sondern nur die einzelnen Aspekte, die man im Körper der
-        // neuen anonymen Klasse definiert. Zum Beispiel hier möchte man nur den Style setzen, und den Rest der Eigenschaften unangetastet
-        // lassen. Darum wird die nächste valide Implementierung der Methode in einer Elternklasse aufgerufen, um diese Kernfunktionen zu
-        // gewährleisten.
-
     }
 
+    //Setzt Default-Verhalten nach Wiedergabeende
     private void playerBehavior() {
         if (player == null) {
             System.out.println(">playerBehavior: No player instance found, returning.");
@@ -837,6 +854,7 @@ private void selectTreeItem(MouseEvent event) {
 
 // - - - - - - - - - - - - - - - - - - - - - Playback Start - - - - - - - - - - - - - - - - - - - - - - - - -
 
+    //Einfache Play-Methode
     @FXML
     private void clickPlay() {
         if (queue == null) {
@@ -856,6 +874,7 @@ private void selectTreeItem(MouseEvent event) {
         }
     }
 
+    //Einfache Stop-Methode
     @FXML
     private void clickStop() {
         if (player != null) {
@@ -864,24 +883,34 @@ private void selectTreeItem(MouseEvent event) {
         }
     }
 
+    //Methodenerklärung bei der eigentlichen Methide
     @FXML
     private void clickNext() {
         playNextOrStop();
     }
 
+    //Methodenerklärung bei der eigentlichen Methide
     @FXML
     private void clickPrevious() {
         playPrevious();
     }
 
+    //Konditionales Next: Abhängig von Playlist Ende / nicht Ende, RepeatQueue / Autoplay an / aus.
     private void playNextOrStop() {
-        System.out.println("[[playNextOrStop]]: Method call: playNextOrStop.");
+        System.out.println("[[playNextOrStop]]: Method call: playNextOrStop. CountingIndex:"+countingIndex+"repeat queue true?"+repeatQueue);
         if (player == null) {
             System.out.println("[[playNextOrStop]]: No player found.");
             return;
         }
-        if (!repeatQueue || currentQueue == null) {
+        if(currentQueue == null){
             player.stop();
+            System.out.println("No queue found, stopping player.");
+            return;
+        }
+        if (countingIndex == currentQueue.indexOf(currentQueue.getLast()) && !repeatQueue) {
+            player.stop();
+            System.out.println("Player stop  end of queue");
+            return;
         }
 
         int nextSongIndex;
@@ -940,9 +969,8 @@ private void selectTreeItem(MouseEvent event) {
         }
     }
 
+    //Konditionales Previous: Abhängig von Playlist Anfang / nicht Anfang.
     private void playPrevious() {
-        System.out.println("current queue contains: " + currentQueue);
-
         if (player == null) {
             System.out.println("No player instance found.");
             return;
@@ -951,21 +979,22 @@ private void selectTreeItem(MouseEvent event) {
         int previousSongIndex = queue.getPreviousIfExists(countingIndex);
         Song previousSong;
 
-        if (previousSongIndex > -1) {
+        if (previousSongIndex != -1) {
             previousSong = currentQueue.get(previousSongIndex);
             player.stop();
             player.dispose();
             player = new MediaPlayer(songToMedia(previousSong));
             countingIndex -= 1;
-            initiatePlay();
             player.play();
+            initiatePlay();
             System.out.println("Playing previous Index: " + previousSong.getTitle());
         } else {
             player.seek(Duration.ZERO);
-            System.err.println("No prior index found, setting playback to 0.");
+            System.err.println("No prior index found, setting playback to 0. Song on 1st index: "+currentQueue.getFirst().getTitle());
         }
     }
 
+    //Methode sollte überholt oder ersetzt werden
     private void playSelection() {
         if (player != null) {
             player.stop();
@@ -978,6 +1007,7 @@ private void selectTreeItem(MouseEvent event) {
         }
         Media newPlayback = songToMedia(selectedSong);
         player = new MediaPlayer(newPlayback);
+        System.out.println("currentQueue update: FX thread?"+Platform.isFxApplicationThread());
         currentQueue = queue.getQueue();
         System.out.println("Playing after double click or enter press newPlayBack: " + newPlayback + ", which is the same as selectedSong.getTitle(): " + selectedSong.getTitle());
         currentSong = selectedSong;
@@ -986,19 +1016,18 @@ private void selectTreeItem(MouseEvent event) {
         player.play();
     }
 
-    //todo: ProgressBar anklickbar machen und Lied zur Stelle vorspulen
-    //todo: kleine Popups bei Mouseover: ProgressBar Minute:Sekunde, über TableColumn gesamter Inhalt, ebenso über TreeItem.
-
-    /// A Scene in JavaFX represents the content of a stage (window). It is a container for all the visual elements
-
+    //Listener für Enter und Doppelklick in TableView
     private void handleEnterOrDoubleClickCenterTableView() {
         selectedSong = centerTableView.getSelectionModel().getSelectedItem();
         if (currentQueue != null) {
             currentQueue.clear();
+            System.out.println("currentQueue update: FX thread?"+Platform.isFxApplicationThread());
             System.out.println("currentQueue cleared.");
         }
         currentQueue = FXCollections.observableArrayList(centerTableView.getItems());
+        System.out.println("currentQueue update: FX thread?"+Platform.isFxApplicationThread());
         queue.setQueue(currentQueue);
+        System.out.println("currentQueue update: FX thread?"+Platform.isFxApplicationThread());
         playingTableView.setItems(currentQueue);
         if (queue.getQueue() != null) {
             for (var song : currentQueue) {
@@ -1034,6 +1063,7 @@ private void selectTreeItem(MouseEvent event) {
         }
     }
 
+    //Listener für Enter und Doppelklick in Queue
     private void handleEnterOrDoubleClickPlayingTableView() {
         if (player != null) {
             player.stop();
@@ -1057,6 +1087,7 @@ private void selectTreeItem(MouseEvent event) {
         initiatePlay();
     }
 
+    //Listener für Alt-Enter/Doppelklick
     private void singlePlay() {
         if (player != null) {
             player.stop();
@@ -1068,6 +1099,7 @@ private void selectTreeItem(MouseEvent event) {
         queue.clearQueue();
         queue.addSong(selectedSong);
         currentQueue = queue.getQueue();
+        System.out.println("currentQueue update: FX thread?"+Platform.isFxApplicationThread());
         playingTableView.setItems(currentQueue);
         Media assignSinglePlay = songToMedia(selectedSong);
         player = new MediaPlayer(assignSinglePlay);
@@ -1082,25 +1114,19 @@ private void selectTreeItem(MouseEvent event) {
 
         playSelection();
         initiatePlay();
-        //todo: allow multiple selection during ctrl-click, probably redesign method with array for selection
-        // außerdem strg+A für alle auswählen
     }
-
-    //todo: idee: während drag auf ProgressBar per Tastendruck (oder drag out of bounds?) Tonspur anzeigen lassen
 
 // - - - - - - - - - - - - - - - - - - - - - Playback Ende - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // - - - - - - - - - - - - - - - - - - - - - Rest - - - - - - - - - - - - - - - - - - - - - - - - -
-    //Scheduling: When Platform.runLater is called, it schedules the Runnable to be executed on the JavaFX Application Thread. This is the thread responsible for handling all JavaFX UI updates.
-    //Execution: The JavaFX runtime maintains a queue of tasks to be executed on the JavaFX Application Thread. The Runnable provided to Platform.runLater is added to this queue.
-    //Thread Safety: By ensuring that the Runnable is executed on the JavaFX Application Thread, Platform.runLater guarantees that any UI updates within the run method are performed in a thread-safe manner, avoiding concurrency issues.
 
-
+    //Markierung nicht mehr gebrauchter Werte für den Garbage Collector
     private void cleanup() {
         loopCount = 0;
         startTime = 0;
     }
 
+    //Veraltete Methode
     @FXML
     private void handleRefresh() {
 
@@ -1117,23 +1143,6 @@ private void selectTreeItem(MouseEvent event) {
             return null;
         }
         return new Media(new File(song.getPath()).toURI().toString());
-    }
-
-    private void createTree(File file, TreeItem<File> parentItem, int depth, int maxDepth) {
-        if (depth > maxDepth){
-            System.out.println("Endlosschleife oder zu tiefe Ordnerverzweigung: Maximale Rekursionstiefe erreicht.");
-            return;
-        }
-        File[] files = file.listFiles();
-            for (var f : files) {
-                if (containsMP3Files(f)) {
-                    TreeItem<File> treeItem = new TreeItem<>(f);
-                    parentItem.getChildren().add(treeItem);
-                    createTree(f, treeItem, depth + 1, maxDepth);
-                    loopCount++;
-                    System.out.println("Scanned: " + loopCount);
-                }
-            }
     }
 }
 
