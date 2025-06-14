@@ -31,10 +31,10 @@ import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.util.Callback;
 import javafx.util.Duration;
-import org.example.musikplayer_doit.model.MP3FileMetadataExtractor;
+import org.example.musikplayer_doit.services.MP3FileMetadataExtractor;
 import org.example.musikplayer_doit.model.Playlist;
 import org.example.musikplayer_doit.model.Song;
-import org.w3c.dom.ls.LSOutput;
+import org.example.musikplayer_doit.services.TreeViewBuilder;
 
 import java.io.File;
 import java.io.FilenameFilter;
@@ -95,8 +95,6 @@ public class Controller {
     private Node previousFocus;
     //Als Ausgabe während TreeView-Erstellung
     private int loopCount;
-    //Als Ausgabe der Ladezeit der TreeView-Erstellung
-    private long startTime;
     //Dient Synchronisierung zwischen Player und Liste
     private int countingIndex;
     //Dient unmittelbarer Auswahl von Medien
@@ -118,8 +116,9 @@ public class Controller {
 
     //Initialisiert alle grundlegenden Werte des Programms
     public void initialize() {
-        initializeTreeView();
-        applyCellFactory();
+        TreeViewBuilder treeViewBuilder = new TreeViewBuilder(folderTreeView);
+        treeViewBuilder.initializeTreeView();
+        treeViewBuilder.applyCellFactory();
         trackBorderPaneFocus();
         centerTableViewClearHandler();
         playingTableViewClearHandler();
@@ -144,125 +143,6 @@ public class Controller {
         lengthColumn.setCellValueFactory(new PropertyValueFactory<>("length"));
         artistColumn.setCellValueFactory(new PropertyValueFactory<>("artist"));
         genreColumn.setCellValueFactory(new PropertyValueFactory<>("genre"));
-    }
-
-    private void initializeTreeView() {
-        folderTreeView.setMouseTransparent(true);
-        folderTreeView.setOpacity(0.5);
-        File rootFile = new File("My Computer");
-        TreeItem<File> rootItem = new TreeItem<>(rootFile);
-        //TreeItem<File> rootItem = new TreeItem<>(null);
-        //rootItem.setValue(new File("My Computer"));
-        folderTreeView.setRoot(rootItem);
-
-        //rootItem.setExpanded(true);
-        //folderTreeView.setShowRoot(true);
-
-        File[] drives = File.listRoots();
-
-        for (var d : drives) {
-            TreeItem<File> driveItem = new TreeItem<>(d);
-            rootItem.getChildren().add(driveItem);
-            driveItem.setValue(new File(d.getAbsolutePath()));
-
-            //File[] files = d.listFiles();
-
-            Task<Void> task = new Task<Void>() {
-                @Override
-                protected Void call() throws Exception {
-                    startTime = System.currentTimeMillis();
-                    for (var f : drives) {
-                        if (f.isDirectory()) {
-                            createTree(f, driveItem, 0, 10);
-                        }
-                    }
-                    return null;
-                }
-            };
-            //WorkerStateEvents reagieren auf Statusmeldungen von Hintergrundthreads, hier "SUCCEEDED"
-            task.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
-                @Override
-                public void handle(WorkerStateEvent workerStateEvent) {
-                    System.out.println("Task abgeschlossen: Alle Verzeichnisse gescannt für Festplatten: " + Arrays.toString(File.listRoots()));
-                    folderTreeView.setMouseTransparent(false);
-                    folderTreeView.setOpacity(1);
-                    cleanup();
-                }
-            });
-            Thread thread = new Thread(task);
-            thread.setDaemon(true); // Beendet den Thread, wenn die Anwendung vorzeitig geschlossen wird
-            thread.start();
-        }
-    }
-
-    //Zu verbessern: bricht aktuell Scan ab, wenn Überordner keine mp3-Dateien enthält, auch wenn Unterordner welche enthält.
-
-    private boolean containsMP3Files(File directory) {
-        if (directory.isDirectory()) {
-            File[] checkMP3File = directory.listFiles(new FilenameFilter() {
-                @Override
-                public boolean accept(File dir, String name) {
-                    return name.toLowerCase().endsWith(".mp3");
-                }
-            });
-            return checkMP3File != null && checkMP3File.length > 0;
-        }
-        return false;
-    }
-
-    private void createTree(File file, TreeItem<File> parentItem, int depth, int maxDepth) {
-        if (depth > maxDepth){
-            System.out.println("Endlosschleife oder zu tiefe Ordnerverzweigung: Maximale Rekursionstiefe erreicht.");
-            return;
-        }
-        File[] files = file.listFiles();
-        for (var f : files) {
-            if (containsMP3Files(f)) {
-                TreeItem<File> treeItem = new TreeItem<>(f);
-                parentItem.getChildren().add(treeItem);
-                createTree(f, treeItem, depth + 1, maxDepth);
-                loopCount++;
-                System.out.println("Scanned: " + loopCount);
-            }
-        }
-    }
-
-    //Cellfactory customizes default rendering of cells in a ListView, TableView, TreeView
-    //item und empty werden von JavaFX vorgegeben
-    //setRowFactory nimmt Callback an, welcher eine TableRow erstellt.
-    // -> TableView Eingabe, TableRow Ausgabe => new TableRow.
-    // heißt: tview -> (wird zu) new TableRow<>() { ... (Körperinhalt der anonymen Klasse = was überschrieben wird.
-
-    //Mit anderen Worten: Man möchte sich die Methode updateItem zunutze machen, um die Zelle mit neuen Eigenschaften zu aktualisieren.
-    // Damit möchte man aber nicht alle Basiseigenschaften überschreiben, sondern nur die einzelnen Aspekte, die man im Körper der
-    // neuen anonymen Klasse definiert. Zum Beispiel hier möchte man nur den Style setzen, und den Rest der Eigenschaften unangetastet
-    // lassen. Darum wird die nächste valide Implementierung der Methode in einer Elternklasse aufgerufen, um diese Kernfunktionen zu
-    // gewährleisten.
-    private void applyCellFactory() {
-        folderTreeView.setCellFactory(new Callback<TreeView<File>, TreeCell<File>>() {
-            @Override
-            public TreeCell<File> call(TreeView<File> fileTreeView) {
-                return new TreeCell<>() {
-                    @Override
-                    protected void updateItem(File item, boolean empty) {
-                        super.updateItem(item, empty);
-                        if (item != null && !empty) {
-                            setText(item.getName());
-                        }
-                        if (item != null) {
-                            if (item.getName().isEmpty()) {
-                                setText(item.getAbsolutePath());
-                                System.err.println("Setting path instead of name for " + item);
-                            }
-                        }
-                        if (item == null && empty) {
-                            setText("");
-                            setGraphic(null);
-                        }
-                    }
-                };
-            }
-        });
     }
 
     //Fokus auf Auswahl behalten (insb. nach Klick auf VolumeSlider)
@@ -1119,13 +999,10 @@ public class Controller {
 // - - - - - - - - - - - - - - - - - - - - - Playback Ende - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // - - - - - - - - - - - - - - - - - - - - - Rest - - - - - - - - - - - - - - - - - - - - - - - - -
-
-    //Markierung nicht mehr gebrauchter Werte für den Garbage Collector
-    private void cleanup() {
-        loopCount = 0;
-        startTime = 0;
-    }
-
+//Markierung nicht mehr gebrauchter Werte für den Garbage Collector
+private void cleanup() {
+    loopCount = 0;
+}
     //Veraltete Methode
     @FXML
     private void handleRefresh() {
