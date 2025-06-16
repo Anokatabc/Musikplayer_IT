@@ -56,8 +56,12 @@ private static Mp3FolderInfo mp3FolderInfo;
                 Files.walkFileTree(drive.toPath(), new FileVisitor<Path>() {
                     @Override
                     public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-                        if (!Files.isReadable(dir)) {
-                            System.err.println("Unreadable - Skipping folder: " + dir);
+                        if (!Files.isReadable(dir) || !Files.isExecutable(dir)) {
+                            System.err.println("Unreadable or inaccessible - Skipping folder: " + dir);
+                            return FileVisitResult.SKIP_SUBTREE;
+                        }
+                        if (!Files.exists(dir)) {
+                            System.err.println("Existiert nicht: " + dir);
                             return FileVisitResult.SKIP_SUBTREE;
                         }
                         if (dir.getFileName() != null){
@@ -99,9 +103,10 @@ private static Mp3FolderInfo mp3FolderInfo;
                     @Override
                     public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
                         if (exc != null) {
-                            System.err.println("Fehler beim Verarbeiten von " + file + ": " + exc.getMessage() + "().");
+                            System.err.println("Fehler beim Zugriff auf " + file + ": " + exc.getClass().getSimpleName() +": "+exc.getMessage());
                             throw new IOException(exc);
                         }
+                        exc.printStackTrace();
                         return FileVisitResult.CONTINUE;
                         //Fehler protokollieren
                         //Invoked for a file that could not be visited.

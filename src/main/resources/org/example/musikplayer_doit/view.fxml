@@ -36,14 +36,14 @@
                   <Font size="15.0" />
                </font>
                <graphic>
-                  <Label alignment="CENTER" contentDisplay="CENTER" minHeight="-Infinity" minWidth="-Infinity" prefHeight="21.0" prefWidth="40.0" text="⏹" textAlignment="CENTER">
+                  <Label alignment="CENTER" contentDisplay="CENTER" minHeight="-Infinity" minWidth="-Infinity" prefHeight="21.0" prefWidth="32.0" text="⏹" textAlignment="CENTER">
                      <font>
                         <Font size="15.0" />
                      </font>
                   </Label>
                </graphic>
                <HBox.margin>
-                  <Insets right="5.0" />
+                  <Insets />
                </HBox.margin></Button>
             <Button contentDisplay="CENTER" focusTraversable="false" minHeight="-Infinity" minWidth="30.0" onAction="#clickPrevious" prefHeight="35.0" prefWidth="40.0" textAlignment="CENTER">
                <font>
@@ -60,7 +60,7 @@
                   </Label>
                </graphic>
                <HBox.margin>
-                  <Insets left="5.0" right="5.0" />
+                  <Insets left="3.0" right="3.0" />
                </HBox.margin></Button>
             <Button id="playButton" fx:id="playButton" contentDisplay="CENTER" focusTraversable="false" maxHeight="50.0" maxWidth="50.0" minHeight="-Infinity" minWidth="-Infinity" prefHeight="35.0" prefWidth="50.0" style="-fx-background-radius: 50; -fx-font-size: 25px;" textAlignment="CENTER" textOverrun="CLIP">
                <font>
@@ -91,20 +91,17 @@
                   </Label>
                </graphic>
                <HBox.margin>
-                  <Insets left="5.0" right="5.0" />
+                  <Insets left="3.0" right="3.0" />
                </HBox.margin></Button>
             <ToggleButton fx:id="autoPlayButton" contentDisplay="CENTER" focusTraversable="false" minHeight="-Infinity" minWidth="30.0" mnemonicParsing="false" prefHeight="35.0" prefWidth="40.0" styleClass="#autoPlayButton:pressed {    -fx-background-color: derive(-fx-base, 50%);}" textAlignment="CENTER">
                <tooltip>
-                  <Tooltip anchorLocation="WINDOW_TOP_LEFT" contentDisplay="TOP" graphicTextGap="0.0" text="Toggle AutoPlay">
-                     <font>
-                        <Font size="14.0" />
-                     </font></Tooltip>
+                  <Tooltip text="Toggle AutoPlay" />
                </tooltip>
                <font>
                   <Font size="20.0" />
                </font>
                <HBox.margin>
-                  <Insets left="5.0" right="5.0" />
+                  <Insets />
                </HBox.margin>
                <graphic>
                   <Label minHeight="-Infinity" minWidth="-Infinity" prefHeight="35.0" prefWidth="40.0" text="⏯">
@@ -128,7 +125,7 @@
             <StackPane nodeOrientation="LEFT_TO_RIGHT" prefHeight="76.0" prefWidth="900.0">
                <children>
                   <Label fx:id="progressBarLabel" />
-                  <ProgressBar fx:id="progressBar" focusTraversable="false" layoutX="-50.0" prefHeight="62.0" prefWidth="800.0" progress="0.0">
+                  <ProgressBar fx:id="progressBar" focusTraversable="false" layoutX="-50.0" prefHeight="62.0" prefWidth="900.0" progress="0.0">
                      <tooltip>
                         <Tooltip fx:id="barTooltip" />
                      </tooltip>
@@ -146,18 +143,15 @@
                   <Insets />
                </opaqueInsets>
             </Label>
-            <ToggleButton fx:id="repeatQueueButton" contentDisplay="CENTER" focusTraversable="false" minHeight="-Infinity" minWidth="40.0" mnemonicParsing="false" prefHeight="35.0" prefWidth="40.0" styleClass="#autoPlayButton:pressed {    -fx-background-color: derive(-fx-base, 50%);}" text="↻" textAlignment="CENTER">
+            <ToggleButton fx:id="repeatQueueButton" contentDisplay="CENTER" focusTraversable="false" minHeight="-Infinity" minWidth="30.0" mnemonicParsing="false" prefHeight="35.0" prefWidth="40.0" styleClass="#autoPlayButton:pressed {    -fx-background-color: derive(-fx-base, 50%);}" text="↻" textAlignment="CENTER">
                <tooltip>
-                  <Tooltip anchorLocation="WINDOW_TOP_RIGHT" minHeight="-Infinity" minWidth="-Infinity" text="Toggle AutoPlay">
-                     <font>
-                        <Font size="14.0" />
-                     </font></Tooltip>
+                  <Tooltip minHeight="-Infinity" minWidth="-Infinity" text="Toggle AutoPlay" />
                </tooltip>
                <font>
                   <Font size="20.0" />
                </font>
                <HBox.margin>
-                  <Insets left="10.0" right="50.0" />
+                  <Insets left="10.0" />
                </HBox.margin>
             </ToggleButton>
          </children>
