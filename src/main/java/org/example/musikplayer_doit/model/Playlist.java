@@ -4,13 +4,8 @@ package org.example.musikplayer_doit.model;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
-import java.util.HashMap;
-import java.util.UUID;
-
 //gelernt: innerhalb eines Packages können alle Klassen auf "einanders" Membervariablen zugreifen.
 public class Playlist  {
-
-    private final HashMap<Song, Integer> songAndId = new HashMap<>();
 
     private ObservableList<Song> queue;
 
@@ -27,44 +22,13 @@ public class Playlist  {
     }
     public void clearQueue(){
         queue.clear();
-        songAndId.clear();
     }
     public void removeSong(Song song){
         queue.remove(song);
     }
-    //public void addSong(Song song){
-    //    queue.add(song);
-    //}
-    //da Hashcode und nicht UUID selbst, nur 99,99% Eindeutigkeit
-    public void addSong(int id, Song song){
+
+    public void addSong(Song song){
         queue.add(song);
-        songAndId.put(song, id);
-    }
-
-    public int getUniqueId (Song song){
-        return songAndId.get(song);
-    }
-
-    public boolean contains (Song song){
-        for (var s : queue){
-            if (s == song){
-                return true;
-            }
-        }
-        return false;
-    }
-    public int getIndexOf(Song song){
-        int index = queue.indexOf(song);
-        return index;
-    }
-    public Song getSongAtFirstIndex(int index){
-        for (var s : queue){
-            if (queue.indexOf(s) == index){
-                return s;
-            }
-        }
-        System.err.println(">getSongAtFirstIndex in Model: no song found");
-        return null;
     }
 
     public int getNext(int currentSongIndex){
@@ -89,12 +53,4 @@ public class Playlist  {
         }
         return false;
     }
-
-//    public boolean isEmpty(){
-//        if (this.getQueue() == null){
-//            return true;
-//        }
-//        return false;
-//    }
-
 }

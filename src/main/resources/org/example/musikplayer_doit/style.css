@@ -1,0 +1,111 @@
+/*In Resources im gleichen Ordner wie view.fxml
+oben im BorderPane einbinden=stylesheets="@style.css"
+*/
+
+/* - - - TableView - - - */
+.table-view{
+    -fx-background-color: rgb(248, 254, 255);
+}
+
+.table-row-cell:odd {
+    -fx-background-color: #FFFFFF;
+}
+
+.table-row-cell:even {
+    -fx-background-color: #e2f0f6;
+}
+.table-row-cell:selected{
+    -fx-background-color: linear-gradient(#5da9ed,#48a5f6);
+    
+}
+
+
+/* .table-view .column-header .label {
+    -fx-background-color: red;
+} */
+.table-view .column-header.sorted {
+    -fx-background-color: red;
+    
+}
+
+/* - - - Buttons - - - */
+
+.button {
+    -fx-background-color: linear-gradient(#ffffff, #c3c3c3);
+    -fx-background-radius: 6;
+    -fx-padding: 8 12 8 12;
+    -fx-font-size: 14px;
+}
+
+.button:pressed {
+    -fx-background-color: #c3e2fd;
+    /* -fx-border-color: #607cb8; */
+    /* -fx-border-width: 2; */
+    -fx-padding: 2 2 0 0;
+    -fx-effect: innershadow(gaussian, rgba(0, 0, 0, 0.5), 4, 0.5, 0, 1);
+    -fx-text-fill: #333;
+    -fx-opacity: 0.8;
+}
+
+.toggle-button {
+    -fx-background-color: linear-gradient(#ffffff, #c3c3c3);
+    -fx-background-radius: 6;
+    -fx-padding: 8 12 8 12;
+    -fx-font-size: 16px;
+}
+
+.button:hover, .toggle-button:hover {
+    -fx-background-color: linear-gradient(#c2f2ff,#8BEBF1);
+}
+
+.toggle-button:selected {
+    -fx-background-color: #c3e2fd; /* Dunkleres Blau für den gedrückten Zustand */
+    /* -fx-effect: innershadow(gaussian, rgba(255, 0, 238, 0.6), 4, 0.5, 0, 1); */
+    -fx-border-color: #607cb8; /* Dunklerer Rand */
+    -fx-border-width: 2; /* Etwas dickerer Rand */
+    /* -fx-text-fill: white;  */
+    -fx-padding: 2 2 0 0; /* Leichte Verschiebung für "Eindruck"-Effekt */
+    -fx-effect: innershadow(gaussian, rgba(0, 0, 0, 0.5), 4, 0.5, 0, 1);
+    -fx-text-fill: #333;
+    -fx-opacity: 0.8;
+}
+
+/* - - - TreeView - - - */
+
+.tree-cell:expanded > .tree-disclosure-node {
+    -fx-background-color: linear-gradient(#75c1d6, #3c92de);
+    /* -fx-background-radius: 16; */
+}
+
+.tree-cell:collapsed > .tree-disclosure-node {
+    -fx-background-color: linear-gradient(#d2f5fe, #a6d2f8);
+    /* -fx-background-radius: 16; */
+}
+
+.tree-cell:selected > .tree-disclosure-node {
+    -fx-background-color: rgba(62, 62, 62, 0.491);
+    /* -fx-background-radius: 16; */
+}   
+
+.tree-cell:selected{
+    -fx-background-color: linear-gradient(#72b9cd,#48a5f6);
+}
+
+/* - - - Bar & Slider - - - */
+
+.track {
+      -fx-padding: 2;
+}
+.filled-track{
+    background-color: rgb(192, 3, 255);
+}
+
+
+.progress-bar .bar {
+    -fx-background-color: linear-gradient(#72b9cd, #48a5f6); /* Farbverlauf für den gefüllten Bereich */
+    -fx-background-radius: 4;
+}
+
+.menu-bar {
+    -fx-background-color: linear-gradient(#dcf7ff, #d1e9ff);;
+}

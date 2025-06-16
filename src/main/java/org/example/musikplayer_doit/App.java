@@ -20,7 +20,7 @@ public class App extends Application {
         //src/main/resources/org/example/musikplayer_doit/view.fxml
         Scene scene = new Scene(fxmlLoader.load(), 1220, 940);
         // Set the stage title and scene, then show the stage
-        stage.setTitle("Musikplayer s!");
+        stage.setTitle("Musikplayer für Audiophile 🎵");
         stage.setScene(scene);
         stage.show();
     }
@@ -29,6 +29,4 @@ public class App extends Application {
         // Launch the JavaFX application
         launch();
     }
-
-
 }
