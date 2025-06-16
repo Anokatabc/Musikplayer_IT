@@ -4,8 +4,13 @@ package org.example.musikplayer_doit.model;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
+import java.util.HashMap;
+import java.util.UUID;
+
 //gelernt: innerhalb eines Packages können alle Klassen auf "einanders" Membervariablen zugreifen.
 public class Playlist  {
+
+    private final HashMap<Song, Integer> songAndId = new HashMap<>();
 
     private ObservableList<Song> queue;
 
@@ -22,13 +27,24 @@ public class Playlist  {
     }
     public void clearQueue(){
         queue.clear();
+        songAndId.clear();
     }
     public void removeSong(Song song){
         queue.remove(song);
     }
-    public void addSong(Song song){
+    //public void addSong(Song song){
+    //    queue.add(song);
+    //}
+    //da Hashcode und nicht UUID selbst, nur 99,99% Eindeutigkeit
+    public void addSong(int id, Song song){
         queue.add(song);
+        songAndId.put(song, id);
     }
+
+    public int getUniqueId (Song song){
+        return songAndId.get(song);
+    }
+
     public boolean contains (Song song){
         for (var s : queue){
             if (s == song){
@@ -50,6 +66,30 @@ public class Playlist  {
         System.err.println(">getSongAtFirstIndex in Model: no song found");
         return null;
     }
+
+    public int getNext(int currentSongIndex){
+        if (currentSongIndex < queue.size()){
+            return currentSongIndex+1;
+        } else {
+            return -1;
+        }
+    }
+
+    public int getPreviousIfExists (int currentSongIndex){
+        if (queue.size() > 1 && currentSongIndex > 0){
+            return currentSongIndex-1;
+        } else {
+            return -1;
+        }
+    }
+
+    public boolean isLastIndex (int countingIndex){
+        if (countingIndex == queue.indexOf(queue.getLast())){
+            return true;
+        }
+        return false;
+    }
+
 //    public boolean isEmpty(){
 //        if (this.getQueue() == null){
 //            return true;

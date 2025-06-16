@@ -1,3 +1,10 @@
+//done: Titel des aktuellen Liedes in ein Label? über / in dem Wiedergabebalken laden.
+//todo: für Abgabe unbedingt mit My Computer machen, sonst wird es nicht bei jedem Tester funktionieren.
+//todo: default sortierfunktion nur zwischen a-z und z-a wechseln lassen, keine dritte Stufe.
+//done: komisches Verhalten bei Klick auf Spaltennamen in playingTableView aufklären
+//public private nochmal genau anschauen, was und warum setzt man sie?
+//falls mit Datenbank, Dump im Zip mitschicken.
+//todo: interface erstellen? play.play() muss mit initializePlay() verwendet werden, z. B.
 //debugging thread: Thread.currentThread().getName()
 // oder Platform.isFxApplicationThread()
 
@@ -42,6 +49,7 @@ import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.skin.TableHeaderRow;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
@@ -60,6 +68,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 //todo: user option to set root folder
 
@@ -94,6 +103,8 @@ public class Controller {
     @FXML
     private ProgressBar progressBar;
     @FXML
+    private Label progressBarLabel;
+    @FXML
     private TableColumn<Song, String> noColumn;
 
     @FXML
@@ -109,17 +120,67 @@ public class Controller {
 
     private Node previousFocus;
     private int loopCount;
-    private int previousIndex = 0;
+    private long startTime;
     private int countingIndex;
     private Song selectedSong;
     private Song currentSong;
-    private boolean autoPlay;
     MP3FileMetadataExtractor mp3FileMetadataExtractor;
 
     public ObservableList<Song> centerList = FXCollections.observableArrayList();
-    //public ObservableList<Song> queue = FXCollections.observableArrayList();
     Playlist queue;
     private ObservableList<Song> currentQueue;
+
+    @FXML
+    ToggleButton autoPlayButton;
+    @FXML
+    ToggleButton repeatQueueButton;
+
+    //@FXML
+    //private ToggleButton repeatButton;
+    //
+    //private enum RepeatState {
+    //    UNCLICKED, REPEAT_QUEUE, REPEAT_SINGLE
+    //}
+    //
+    //private RepeatState currentState = RepeatState.UNCLICKED;
+    //
+    //@FXML
+    //private void initialize() {
+    //    repeatButton.setOnAction(event -> toggleRepeatState());
+    //    updateButtonAppearance(); // Initiales Aussehen setzen
+    //}
+    //
+    //private void toggleRepeatState() {
+    //    // Zustand wechseln
+    //    switch (currentState) {
+    //        case UNCLICKED -> currentState = RepeatState.REPEAT_QUEUE;
+    //        case REPEAT_QUEUE -> currentState = RepeatState.REPEAT_SINGLE;
+    //        case REPEAT_SINGLE -> currentState = RepeatState.UNCLICKED;
+    //    }
+    //    updateButtonAppearance();
+    //}
+    //
+    //private void updateButtonAppearance() {
+    //    // Aussehen des Buttons basierend auf dem Zustand ändern
+    //    switch (currentState) {
+    //        case UNCLICKED -> {
+    //            repeatButton.setText("Off");
+    //            repeatButton.setStyle("-fx-background-color: lightgray;");
+    //        }
+    //        case REPEAT_QUEUE -> {
+    //            repeatButton.setText("Repeat Queue");
+    //            repeatButton.setStyle("-fx-background-color: lightblue;");
+    //        }
+    //        case REPEAT_SINGLE -> {
+    //            repeatButton.setText("Repeat Single");
+    //            repeatButton.setStyle("-fx-background-color: lightgreen;");
+    //        }
+    //    }
+    //}
+
+    //default player behavior variables:
+    private boolean autoPlay = true;
+    private boolean repeatQueue;
 
 //mostly done: initialize() abspecken (auslagern)
 
@@ -134,6 +195,7 @@ public class Controller {
         handleVolumeSlider();
         initializeCenterTableViewListener();
         initializePlayingTableViewListener();
+        initializeButtonListener();
 
         //MouseEventService mouseEventService;
         centerTableView.requestFocus();
@@ -169,13 +231,39 @@ public class Controller {
     }
 
 
-
+private void initializeButtonListener(){
+        //done: still make player skip to next song, then stop. (or regardless of stopping)
+    autoPlayButton.selectedProperty().addListener(new ChangeListener<Boolean>() {
+        @Override
+        public void changed(ObservableValue<? extends Boolean> observableValue, Boolean oldValue, Boolean newValue) {
+            if (newValue) { // Button ist gedrückt
+                autoPlay = false;
+                System.out.println("Autoplay button pressed: " + autoPlay);
+            } else { // Button ist nicht gedrückt
+                autoPlay = true;
+                System.out.println("Autoplay button released: " + autoPlay);
+            }
+        }
+    });
+    repeatQueueButton.selectedProperty().addListener(new ChangeListener<Boolean>() {
+        @Override
+        public void changed(ObservableValue<? extends Boolean> observableValue, Boolean oldValue, Boolean newValue) {
+            if (newValue) { // Button ist gedrückt
+                repeatQueue = true;
+                System.out.println("Repeating Queue: " + repeatQueue);
+            } else { // Button ist nicht gedrückt
+                repeatQueue = false;
+                System.out.println("Repeating Queue: " + repeatQueue);
+            }
+        }
+    });
+}
 
 
     // - - - - - - - - - - - - - - - - - - - - - TreeViewController - - - - - - - - - - - - - - - - - - - - - - - - -
 
     // Multithreading: https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ForkJoinPool.html
-private long startTime;
+
 
     //    // Recursive method to create TreeItems up to given depth
     //    private TreeItem<File> createNode(File file, int currentDepth) {
@@ -219,6 +307,7 @@ private long startTime;
     //If not loaded, call the recursive function to scan subfolders up to the maxDepth. This part is the same as described above, but only triggered on demand.
     //Set the "loaded" flag to true.
 
+
     public void initializeTreeView(){
         folderTreeView.setMouseTransparent(true);
         folderTreeView.setOpacity(0.5);
@@ -240,7 +329,6 @@ private long startTime;
                 return null;
             }
         };
-
         //Kurzschreibweise:
         //        Task<Void> task = new Task<>(() -> {
         //           createTree(rootFile, rootItem);
@@ -553,7 +641,7 @@ private long startTime;
 //        button.setTooltip();
     }
 
-//Hintergrund: Fokus auf Auswahl behalten...
+//Hintergrund: Fokus auf Auswahl behalten ...
     private void trackBorderPaneFocus(){
         borderPane.sceneProperty().addListener((observable, oldScene, newScene) -> {
             if (newScene != null) {
@@ -636,6 +724,7 @@ private long startTime;
             double offset =  0.03; // 3%
             double currentTime = newValue.toSeconds();
             double totalDuration = player.getTotalDuration().toSeconds();
+
             //double progress = currentTime / totalDuration;
             double progress = (currentTime / totalDuration) * (1 - offset) + offset;
 
@@ -677,25 +766,31 @@ private long startTime;
             //return;
         }
         Media newPlayback = songToMedia(selectedSong);
+
         player = new MediaPlayer(newPlayback);
         currentQueue = queue.getQueue();
         System.out.println("Playing after double click or enter press newPlayBack: "+newPlayback+", which is the same as selectedSong.getTitle(): "+selectedSong.getTitle());
+        currentSong = selectedSong;
+
         initiatePlay();
         player.play();
     }
 
     private void initiatePlay () {
         System.out.println("[[initiatePlay]]: Method called.");
+        currentQueue = queue.getQueue();
         setCurrentSong();
         setProgressBar();
         player.setVolume(volumeSlider.getValue());
         transformPlayButton();
+        setProgressBarLabel();
         styleCurrentSong();
         playerBehavior();
     }
 
     //done: Styling funktioniert, aber nicht (nun) richtig
     private void styleCurrentSong(){
+        //done: style ( problem: duplicate songs )
 //       playingTableView.setRowFactory(rv -> new TableRow<> () {
 //           @Override
 //           protected void updateItem(Song item, boolean empty) {
@@ -707,21 +802,40 @@ private long startTime;
 //               }
 //           }
 //       });
-        playingTableView.setRowFactory(tv -> new TableRow<>() {
+        Song styleSong = currentQueue.get(countingIndex);
+        centerTableView.setRowFactory(tview -> new TableRow<>() {
             @Override
             protected void updateItem(Song item, boolean empty) {
-                if (item == null && currentSong == null){
-                    return;
-                }
                 super.updateItem(item, empty);
-                if (item != null && item.equals(currentSong)) {
-                    setStyle("-fx-font-weight: bold;");
-                    System.out.println("[[styleCurrentSong]]: set currentSong "+currentSong.getPath()+" bold");
+                if (empty || item == null) {
+                    setStyle(""); // Reset style for leere oder ungültige Zeilen
+                } else if (item.equals(styleSong)) {
+                    setStyle("-fx-font-weight: bold;"); // Stil für die aktuelle Zeile setzen
                 } else {
-                    setStyle(""); // Reset style for other rows
+                    setStyle(""); // Stil für andere Zeilen zurücksetzen
                 }
             }
         });
+        playingTableView.setRowFactory(tview -> new TableRow<>() {
+            @Override
+            protected void updateItem(Song item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setStyle(""); // Reset style for leere oder ungültige Zeilen
+                } else if (item.equals(styleSong)) {
+                    setStyle("-fx-font-weight: bold;"); // Stil für die aktuelle Zeile setzen
+                } else {
+                    setStyle(""); // Stil für andere Zeilen zurücksetzen
+                }
+            }
+        });
+//                if (item != null && item.equals(currentSong)) {
+//                    setStyle("-fx-font-weight: bold;");
+//                } else {
+//                    setStyle(""); // Reset style for other rows
+//                }
+
+
 //        playingTableView.setRowFactory(new Callback<TableView<Song>, TableRow<Song>>() {
 //            @Override
 //            public TableRow<Song> call(TableView<Song> songTableView) {
@@ -729,49 +843,66 @@ private long startTime;
 //            }
 //        });
 
-        centerTableView.setRowFactory(tv -> new TableRow<>() {
-            @Override
-            protected void updateItem(Song item, boolean empty) {
-                super.updateItem(item, empty);
-                if (item != null && item.equals(currentSong)) {
-                    setStyle("-fx-font-weight: bold;");
-                } else {
-                    setStyle(""); // Reset style for other rows
-                }
-            }
-        });
+        //item und empty werden von JavaFX vorgegeben
+        //setRowFactory nimmt Callback an, welcher eine TableRow erstellt.
+        // -> TableView Eingabe, TableRow Ausgabe => new TableRow.
+        // heißt: tview -> (wird zu) new TableRow<>() { ... (Körperinhalt der anonymen Klasse = was überschrieben wird.
+
+        //Mit anderen Worten: Man möchte sich die Methode updateItem zunutze machen, um die Zelle mit neuen Eigenschaften zu aktualisieren.
+        // Damit möchte man aber nicht alle Basiseigenschaften überschreiben, sondern nur die einzelnen Aspekte, die man im Körper der
+        // neuen anonymen Klasse definiert. Zum Beispiel hier möchte man nur den Style setzen, und den Rest der Eigenschaften unangetastet
+        // lassen. Darum wird die nächste valide Implementierung der Methode in einer Elternklasse aufgerufen, um diese Kernfunktionen zu
+        // gewährleisten.
+//        centerTableView.setRowFactory(new Callback<TableView<Song>, TableRow<Song>>() {
+//            @Override
+//            public TableRow<Song> call(TableView<Song> tview) {
+//                return new TableRow<>() {
+//                    @Override
+//                    protected void updateItem(Song item, boolean empty) {
+//                        super.updateItem(item, empty);
+//                        if (item != null && item.equals(currentSong)) {
+//                            setStyle("-fx-font-weight: bold;");
+//                        } else {
+//                            setStyle(""); // Reset style for other rows
+//                        }
+//                    }
+//                };
+//            }
+//        });
 
     }
 
     //done: play method respond to focus instead of selection
     //done: play method respond to double click and enter press on selection
 
+    private void setProgressBarLabel(){
+        progressBarLabel.setText(currentQueue.get(countingIndex).getTitle());
+    }
+
     private void playerBehavior() {
         //player.setOnEndOfMedia(this::playNextOrStop);
 //        player.setOnEndOfMedia(() -> {
 //            playNextOrStop();
 //                });
-        autoPlay = true;
+
+
         if (player == null) {
+            System.out.println(">playerBehavior: No player instance found, returning.");
             return;
         }
-        player.setOnEndOfMedia(new Runnable() {
-            @Override
-            public void run() {
-                //if
-            }
-        });
+//        player.setOnEndOfMedia(() -> {
+//            ...
+//        });
+        // =
         //Autoplay: on
-        player.setOnEndOfMedia(new Runnable() {
-            @Override
-            public void run() {
-                System.out.println("endOfMedia triggered by method playerBehavior();");
-                if (autoPlay) {
-                    progressBar.setProgress(0);
-                    playNextOrStop();
-                }
-            }
+        player.setOnEndOfMedia(() -> {
+            System.out.println("endOfMedia triggered by method playerBehavior();");
+            progressBar.setProgress(0);
+            playNextOrStop();
         });
+
+
+
 
     }
     //mostly done: clickPlay auslagern / abspecken
@@ -809,9 +940,18 @@ private long startTime;
         Media newPlayback = songToMedia(selectedSong);
         System.out.println("[DoubleClick or Enter PlayingTableView]: Assigning new Media to play: "+newPlayback);
         player = new MediaPlayer(newPlayback);
+        currentSong = selectedSong;
+        if (currentQueue.contains(selectedSong)){
+            countingIndex = currentQueue.indexOf(selectedSong);
+            System.out.println("countingIndex: "+countingIndex);
+        } else {
+            System.err.println("Queue does not contain selectedSong, countingIndex may be desynchronized");
+        }
         player.play();
         initiatePlay();
     }
+
+
 
     private void handleEnterOrDoubleClickCenterTableView() {
         selectedSong = centerTableView.getSelectionModel().getSelectedItem();
@@ -820,18 +960,44 @@ private long startTime;
 //            System.out.println("lookup Metadata: "+s.getTitle());
 //            System.out.println("lookup Metadata: "+s.getPath());
 //        }
-        if (queue != null){
-            queue.clearQueue();
+        if (currentQueue != null){
+            currentQueue.clear();
+            System.out.println("currentQueue cleared.");
         }
-        ObservableList<Song> newQueueItems = FXCollections.observableArrayList(centerTableView.getItems());
-        queue.setQueue(newQueueItems);
+        currentQueue = FXCollections.observableArrayList(centerTableView.getItems());
+        queue.setQueue(currentQueue);
         playingTableView.setItems(queue.getQueue());
         if (queue.getQueue() != null){
             for (var song : queue.getQueue()){
                 System.out.println("Added: "+song.getTitle());
             }
         }
-        playSelection();
+
+        if (player != null){
+            player.stop();
+            player.dispose();
+        }
+
+        selectedSong = centerTableView.getSelectionModel().getSelectedItem();
+        System.out.println("[DoubleClick or Enter PlayingTableView]: Selected Song: "+centerTableView.getSelectionModel().getSelectedItem());
+        Media newPlayback = songToMedia(selectedSong);
+        System.out.println("[DoubleClick or Enter PlayingTableView]: Assigning new Media to play: "+newPlayback);
+        player = new MediaPlayer(newPlayback);
+        currentSong = selectedSong;
+        if (currentQueue.contains(selectedSong)){
+            countingIndex = currentQueue.indexOf(selectedSong);
+            System.out.println("countingIndex: "+countingIndex);
+        } else {
+            System.err.println("Queue does not contain selectedSong, countingIndex may be desynchronized");
+        }
+        player.play();
+        initiatePlay();
+
+        if (currentQueue.contains(currentSong)){
+            countingIndex = currentQueue.indexOf(currentSong);
+        } else {
+            System.err.println("Queue does not contain selectedSong, countingIndex may be desynchronized");
+        }
 //        System.out.println("Metadata: "+currentSong.getMetadata());
         //        if (player == null||player.getStatus() == MediaPlayer.Status.STOPPED) {
 //
@@ -868,10 +1034,18 @@ private long startTime;
         }
         selectedSong = centerTableView.getSelectionModel().getSelectedItem();
         queue.clearQueue();
-        queue.addSong(selectedSong);
-        playingTableView.setItems(queue.getQueue());
+        queue.addSong(UUID.randomUUID().hashCode(), selectedSong);
+        currentQueue = queue.getQueue();
+        playingTableView.setItems(currentQueue);
         Media assignSinglePlay = songToMedia(selectedSong);
         player = new MediaPlayer(assignSinglePlay);
+        currentSong = selectedSong;
+        if (currentQueue.contains(selectedSong)){
+            countingIndex = currentQueue.indexOf(selectedSong);
+            System.out.println("countingIndex:"+countingIndex);
+        } else {
+            System.err.println("Queue does not contain selectedSong, countingIndex may be desynchronized");
+        }
         playSelection();
         initiatePlay();
         //todo: allow multiple selection during ctrl-click, probably redesign method with array for selection
@@ -880,23 +1054,28 @@ private long startTime;
     }
     private void addToQueue(){
         selectedSong = centerTableView.getSelectionModel().getSelectedItem();
-        queue.addSong(selectedSong);
+        queue.addSong(UUID.randomUUID().hashCode(), selectedSong);
         System.out.println("Song successfully added to queue.");
     }
 
     private void deleteSongFromQueue(){
-        countingIndex = queue.getIndexOf(currentSong);
-        selectedSong = playingTableView.getSelectionModel().getSelectedItem();
-        queue.removeSong(selectedSong);
-        System.out.println("Song successfully deleted from queue.");
-        if (!queue.contains(currentSong)){
-            System.err.println("Warning: currentSong deleted, initialized previousIndex variable minus 1");
-            if (countingIndex > 1){
-                previousIndex = countingIndex-1;
-            } else if (countingIndex == 1){
-                previousIndex = 1;
-            }
+        int selectedSongIndex = currentQueue.indexOf(selectedSong);
+        if (selectedSongIndex < currentQueue.indexOf(currentQueue.getLast())) {
+            countingIndex -= 1;
+            System.out.println("countingIndex = " + countingIndex);
+        } else {
+            countingIndex = currentQueue.indexOf(currentQueue.getLast());
+            System.out.println("countingIndex set to last and only song in queue " + countingIndex);
         }
+
+        if (selectedSong == currentSong) {
+            System.err.println("Warning: currentSong deleted, initializing countingIndex variable. countingIndex == "+countingIndex);
+        }
+        queue.removeSong(selectedSong);
+        System.out.println("Song successfully deleted from queue, countingIndex = "+countingIndex);
+
+
+
     }
 
     @FXML
@@ -997,42 +1176,33 @@ private long startTime;
 //done: test and fix with headphones
 private void playPrevious() {
     System.out.println("current queue contains: "+currentQueue);
-        if (currentQueue.isEmpty()) {
-        System.err.println(">playPrevious: currentQueue is empty.");
+
+    if (player == null){
+        System.out.println("No player instance found.");
         return;
     }
 
-    if (player == null) {
-        System.out.println("[[playPrevious]]: No player instance found.");
-        return;
-    }
+    int previousSongIndex = queue.getPreviousIfExists(countingIndex);
+    Song previousSong;
 
-
-    if (currentSong == null) {
-        System.err.println("[[playPrevious]]: No currentSong found, returning...");
-        return;
-    }
-
-    int currentSongIndex = currentQueue.indexOf(currentSong);
-    System.out.println("[[playPrevious]]: index of currentSong: " + currentSongIndex);
-    System.out.println("[[playPrevious]]: current queue size: " + currentQueue.size());
-
-    if (currentSongIndex == 0) {
-        player.seek(Duration.ZERO);
-        System.out.println("[[playPrevious]]: No song before the current song in queue, playback set to 0 and continuing.");
+    if (previousSongIndex > -1){
+        previousSong = currentQueue.get(previousSongIndex);
+        player.stop();
+        player.dispose();
+        player = new MediaPlayer(songToMedia(previousSong));
+        countingIndex -= 1;
+        initiatePlay();
+        player.play();
+        System.out.println("Playing: "+previousSong.getTitle());
     } else {
-        Song previousSong = (currentSongIndex == -1)
-                ? currentQueue.get(previousIndex)
-                : currentQueue.get(currentSongIndex - 1);
-
-        System.out.println("[[playPrevious]]: Setting previous song: " + previousSong);
-        currentSong = previousSong;
-        initializeAndPlay(previousSong);
+        player.seek(Duration.ZERO);
+        System.err.println("Setting playback to 0.");
     }
-}
 
+}
     private void initializeAndPlay(Song song) {
         Media media = songToMedia(song);
+        //xx update countingIndex?
         System.out.println("[[initializeAndPlay]]: Stopping playback and setting media: " + media);
         player.stop();
         player.dispose();
@@ -1060,52 +1230,143 @@ private void playPrevious() {
 //        if (!player.getMedia().getSource().equals(currentSong)){
 //            System.err.println("Current song "+currentSong+" is not equal to media source "+currentMediaSource);
 //        }
-        if (player == null){
+        if (player == null || player.getMedia() == null) {
+            System.err.println("[[setCurrentSong]]: Kein Player oder keine Media-Quelle gefunden.");
             currentSong = null;
             return;
         }
 
-        if (player.getMedia().getSource() == null){
-            System.err.println("[[setCurrentSong]]: No media source found, currentSong is null, returning...");
+        //Song tentativeCurrentSong = currentQueue.get(countingIndex);
+        //int currentId = queue.getUniqueId(tentativeCurrentSong);
+        if (currentSong != selectedSong){
+            currentSong = currentQueue.get(countingIndex);
+        }
+
+        //if queue.containsDuplicate(currentSong) > break
+//        String currentMediaSource = player.getMedia().getSource();
+//        String sourcePath = Paths.get(URI.create(currentMediaSource)).toString();
+//        Media currentMedia = player.getMedia();
+//        int currentSongIndex = -1;
+//        for (int i = 0; i < currentQueue.size(); i++){
+//            if (currentQueue.get(i).getPath().equals(sourcePath)){
+//                currentSongIndex=i;
+//                break;
+//            }
+//        }
+
+        //currentSong =
+
+        System.out.println("[[setCurrentSong]]: currentSong erfolgreich gesetzt: " + currentSong.getTitle());
+
+
+        if (currentSong == null) {
+            System.err.println("Unable to set currentSong: "+currentSong);
             return;
         }
-        String currentMediaSource = player.getMedia().getSource();
 
-        String sourcePath = Paths.get(URI.create(currentMediaSource)).toString();
-
-
-        currentSong = findSongByPath(currentQueue, sourcePath);
-        if (currentSong == null) return;
-        System.out.println("[[setCurrentSong]]: currentSong, as calculated based on: " +
-                "\n[[setCurrentSong]]: current player media source (URI to String) -> "+currentMediaSource+"," +
-                "\n[[setCurrentSong]]: converted to path via Paths.get(()).toString -> "+sourcePath+"," +
-                "\n[[setCurrentSong]]: compared with each song in current queue.getQueue is -> "+
-                "\n[[setCurrentSong]]: -> "+currentSong+", its path is -> "+currentSong.getPath());
     }
 
     //done: potentiell auslagern in "private Song determineCurrentSong(ObservableList<Song> list)?"
-    //todo: Button für Playlist wiederholen - boolean Instanzvariable? (fragen)
-    //todo: BUtton für Sleep Timer: Mit oder ohne Volumeverringerung über Zeit.
-    //todo: playPrevious: If playback >3?5? Sekunden: seek 0 currentSong (check mediamonkey standard)
-    //todo: Speichere einfach aktuellen Index von currentSong und rufe ihn ab. Falls Index > queue.size, spiel das letzte Lied.
-    //todo: für playprevious: selbe Logik, aber -1, und falls Index > queue.size, spiel das vorletzte Lied.
+    //done: Button für Playlist wiederholen - boolean Instanzvariable? (fragen)
+    //todo: Button für Sleep Timer: Mit oder ohne Volumeverringerung über Zeit.
+    //erstmalnicht: playPrevious: If playback >3?5? Sekunden: seek 0 currentSong (check mediamonkey standard)
+    //done: Speichere einfach aktuellen Index von currentSong und rufe ihn ab. Falls Index > queue.size, spiel das letzte Lied.
+    //done: für playprevious: selbe Logik, aber -1, und falls Index > queue.size, spiel das vorletzte Lied.
     // next: falls queue == null; stop und dispose.
     // previous: falls queue == null, aber player != null, progress auf 0 setzen. Falls player == null, return.
-    //todo: falls nicht schon vorhanden, automatisches Playerverhalten. onEndOfMedia: schauen ob Song in Queue, welcher nicht currentSong ist. Wenn ja, playback. Wenn nein, stop (nicht dispose).
+    //done: falls nicht schon vorhanden, automatisches Playerverhalten. onEndOfMedia: schauen ob Song in Queue, welcher nicht currentSong ist. Wenn ja, playback. Wenn nein, stop (nicht dispose).
     // fragen: "automatisches player behavior" ist nicht setzbar, oder? ist es richtig, dies mit einer Initialize-Methode bei jeder Playererstellung zu aktualisieren?
+    //Methode zur Steuerung des Verhaltens bei endOfMedia
     private void playNextOrStop() {
         System.out.println("[[playNextOrStop]]: Method call: playNextOrStop.");
         if (player == null) {
             System.out.println("[[playNextOrStop]]: No player found.");
             return;
         }
-
-        int currentSongIndex = currentQueue.indexOf(currentSong);
-        Song nextSong;
-        if (currentSongIndex == currentQueue.size() - 1) {
+        if (!repeatQueue || currentQueue == null){
             player.stop();
-            System.out.println("[[playNextOrStop]]: No more songs in current queue, playback stopped.");
-            return;
+        }
+//        if (currentQueue.contains(currentSong)){
+//            countingIndex = currentQueue.indexOf(currentSong);
+//            System.out.println("countingIndex updated="+countingIndex);
+//        }else {
+//            System.err.println("Queue does not contain selectedSong, countingIndex may be desynchronized");
+//        }
+        //autoPlay
+        //repeatQueue
+        //bedenken= size ist immer lastindex+1
+        int nextSongIndex;
+        Song firstSong = currentQueue.getFirst();
+        Media firstSongMedia = songToMedia(firstSong);
+        if (queue.isLastIndex(countingIndex)){
+            if (autoPlay && repeatQueue){
+                player.stop();
+                player.dispose();
+                countingIndex = currentQueue.indexOf(firstSong);
+                player = new MediaPlayer(firstSongMedia);
+                initiatePlay();
+                player.play();
+                System.out.println("End of queue reached, playing from the beginning.");
+            }
+            if (autoPlay && !repeatQueue){
+                player.stop();
+                System.out.println("End of queue reached, stopping media.");
+            }
+            if (!autoPlay && !repeatQueue){
+                player.stop();
+                System.out.println("(Incidentally) End of queue reached, stopping media.");
+            }
+            if (!autoPlay && repeatQueue){
+                player.stop();
+                player.dispose();
+                countingIndex = currentQueue.indexOf(firstSong);
+                player = new MediaPlayer(firstSongMedia);
+                System.out.println("End of queue reached, initializing next media from the beginning.");
+                initiatePlay();
+                player.play();
+                player.stop();
+            }
+        } else {
+            nextSongIndex = queue.getNext(countingIndex);
+            Media nextSongMedia = songToMedia(currentQueue.get(nextSongIndex));
+            if (autoPlay){
+                player.stop();
+                player.dispose();
+                countingIndex = nextSongIndex;
+                player = new MediaPlayer(nextSongMedia);
+                initiatePlay();
+                player.play();
+                System.out.println("End of Media: Playing next Song in queue");
+            }
+            if (!autoPlay){
+                player.stop();
+                player.dispose();
+                countingIndex = nextSongIndex;
+                player = new MediaPlayer(nextSongMedia);
+                initiatePlay();
+                player.play();
+                player.stop();
+                System.out.println("End of Media: Setting next Song in queue and stopping.");
+            }
+        }
+
+
+
+        /*
+        if (currentSongIndex == currentQueue.size() - 1) {
+            if (repeatQueue == true){
+                System.out.println("Replaying queue from first song");
+                player.stop();
+                player.dispose();
+                Media repeatMedia = songToMedia(currentQueue.getFirst());
+                player = new MediaPlayer(repeatMedia);
+                player.play();
+                return;
+            } else {
+                player.stop();
+                System.out.println("[[playNextOrStop]]: No more songs in current queue, playback stopped.");
+                return;
+            }
         } else {
             nextSong = currentQueue.get(currentSongIndex + 1);
             System.out.println("[[playNextOrStop]]: Setting next song: " + nextSong);
@@ -1120,7 +1381,7 @@ private void playPrevious() {
                 System.out.println("[[playNextOrStop]]: Playing next song in playlist: " + nextPlay.getSource());
             }
         }
-
+*/
     }
 
     private Media songToMedia(Song song){
@@ -1158,7 +1419,7 @@ private void playPrevious() {
         playNextOrStop();
     }
 
-    //todo: make autoplay PlayList default behavior,
+    //done: make autoplay PlayList default behavior,
     // create button and method for "stop after current track", which gets reset after playback stop
     // optionally configurable to not turn off on playback end.
 
@@ -1170,7 +1431,7 @@ private void playPrevious() {
     // ctrl+Enter: add selected song to queue
     // Delete: Delete file (ask permission) // remove from list.
 
-    //todo: Set new focus on arrow up/down. done?
+    //todo: Set new focus on arrow up/down.
 
     //todo: add further playback altering methods and buttons:
     // randomize playback
@@ -1242,7 +1503,7 @@ private void playPrevious() {
             System.out.println("Selected: " + folder);
 
 
-            //todo: plan:
+            //done: plan:
             // Verzeichnis scannen und Song-Objekte erstellen (eigenes Loop 1)
             // Metadaten extrahieren (eigenes Loop 2) und in Map in Song speichern
             // beide verknüpfen (ggf. in Loop 2, alternativ durch die Daten iterieren)
@@ -1426,9 +1687,8 @@ private void playPrevious() {
             @Override
             public void handle(MouseEvent event) {
                 Node clickedNode = event.getPickResult().getIntersectedNode();
-                System.out.println("Clicked node: " + clickedNode);
 
-                // Traverse the node hierarchy to find the TableRow
+                System.out.println("Clicked node: " + clickedNode);
                 while (clickedNode != null && !(clickedNode instanceof TableRow)) {
                     clickedNode = clickedNode.getParent();
                 }
@@ -1556,7 +1816,7 @@ private void playPrevious() {
 
             while (clickedNode != null && !(clickedNode instanceof TableRow)) {
                 clickedNode = clickedNode.getParent();
-                System.err.println("Clicked Node (prevent play if no song was clicked): "+clickedNode);
+                System.out.println("Clicked Node (prevent play if no song was clicked): "+clickedNode);
             }
 
             if (clickedNode instanceof TableRow<?> row) {
@@ -1614,8 +1874,26 @@ private void playPrevious() {
         });
     }
     private void initializePlayingTableViewListener(){
-
         playingTableView.setOnMouseClicked(event -> {
+            Node clickedNode = event.getPickResult().getIntersectedNode();
+
+
+            while (clickedNode != null && !(clickedNode instanceof TableRow)) {
+                clickedNode = clickedNode.getParent();
+                System.out.println("Clicked node: " + clickedNode);
+            }
+            if (clickedNode == null){
+                System.err.println("playingTableView header clicked, returning...");
+                return;
+            }
+//           Node clickedNode = event.getPickResult().getIntersectedNode();
+//
+//            while (clickedNode != null && !(clickedNode instanceof TableRow)) {
+//                clickedNode = clickedNode.getParent();
+//                System.out.println("Clicked Node (prevent play if no song was clicked): "+clickedNode);
+//            }
+//
+//            if (clickedNode instanceof TableRow<?> row)
             if (playingTableView.getSelectionModel().getSelectedItem() == null){
                 System.out.println(">playingTableView: No song selected, returning...");
                 return;
