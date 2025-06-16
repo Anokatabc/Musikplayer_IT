@@ -17,27 +17,30 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.text.Font?>
 
-<BorderPane prefHeight="707.0" prefWidth="1037.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.example.musikplayer_doit.controller.Controller">
+<BorderPane fx:id="borderPane" prefHeight="707.0" prefWidth="1037.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.example.musikplayer_doit.controller.Controller">
    <bottom>
       <HBox prefHeight="100.0" prefWidth="200.0" BorderPane.alignment="CENTER">
          <children>
-            <Slider fx:id="volumeSlider" onDragDetected="#handleVolumeSlider" prefHeight="32.0" prefWidth="105.0" />
-            <Button onAction="#clickStop" prefHeight="50.0" prefWidth="50.0" style="-fx-background-radius: 4px;" text="Stop" />
-            <Button onAction="#clickPrevious" prefHeight="50.0" prefWidth="50.0" text="⏮" />
-            <Button onAction="#clickPlay" prefHeight="50.0" prefWidth="50.0" style="-fx-background-radius: 50; -fx-font-size: 25px;" text="▶⏸" textOverrun="CLIP">
+            <Slider fx:id="volumeSlider" focusTraversable="false" onDragDetected="#handleVolumeSlider" prefHeight="51.0" prefWidth="105.0" />
+            <Button focusTraversable="false" onAction="#clickStop" prefHeight="50.0" prefWidth="50.0" style="-fx-background-radius: 4px;" text="Stop" />
+            <Button focusTraversable="false" onAction="#clickPrevious" prefHeight="50.0" prefWidth="50.0" text="⏮" />
+            <Button fx:id="playButton" contentDisplay="CENTER" focusTraversable="false" maxHeight="50.0" maxWidth="50.0" minHeight="50.0" minWidth="50.0" onAction="#clickPlay" prefHeight="50.0" prefWidth="50.0" style="-fx-background-radius: 50; -fx-font-size: 25px;" textAlignment="CENTER" textOverrun="CLIP">
                <font>
                   <Font size="38.0" />
                </font>
+               <graphic>
+                  <Label fx:id="playButtonLabel" alignment="CENTER" maxWidth="50.0" minWidth="50.0" prefHeight="36.0" prefWidth="50.0" text="▶" />
+               </graphic>
             </Button>
-            <Button onAction="#clickNext" prefHeight="50.0" prefWidth="50.0" text="⏭" />
-            <Label fx:id="barTimer" alignment="CENTER" prefHeight="49.0" prefWidth="48.0" text="00:00" textAlignment="CENTER">
+            <Button focusTraversable="false" onAction="#clickNext" prefHeight="50.0" prefWidth="50.0" text="⏭" />
+            <Label fx:id="barTimer" alignment="CENTER" focusTraversable="false" prefHeight="49.0" prefWidth="48.0" text="00:00" textAlignment="CENTER">
                <rotationAxis>
                   <Point3D />
                </rotationAxis>
                <font>
                   <Font size="16.0" />
                </font></Label>
-            <ProgressBar fx:id="progressBar" onMouseMoved="#updateProgressBar" prefHeight="49.0" prefWidth="532.0" progress="0.0">
+            <ProgressBar fx:id="progressBar" focusTraversable="false" onMouseMoved="#updateProgressBar" prefHeight="49.0" prefWidth="532.0" progress="0.0">
                <tooltip>
                   <Tooltip fx:id="barTooltip" />
                </tooltip></ProgressBar>
@@ -60,6 +63,7 @@
             <Menu text="Help">
                <items>
                   <MenuItem text="About" />
+                  <MenuItem mnemonicParsing="false" onAction="#handleRefresh" text="Refresh Program" />
                </items>
             </Menu>
          </menus>
