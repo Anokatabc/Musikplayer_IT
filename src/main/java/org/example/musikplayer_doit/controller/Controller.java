@@ -1,13 +1,22 @@
+//Nächste Schritte:
+//todo: Controller weiter auslagern,
+//todo: restliche TreeView-Methoden checken und verbessern,
+//todo: alles von File auf Path umstellen,
+//todo: TableView-Methoden ähnlich wie TreeViewBuilder a) auslagern und b) verbessern - es lädt mitunter recht lange,
+//todo: Metadaten bearbeitbar machen,
+//todo: Datenbankanbindung.
+//todo: TableView ObservableLists konsolidieren
+
 //todo: Button für Sleep Timer: Mit oder ohne Volumeverringerung über Zeit.
 //todo: drag & drop songs
 //todo: mute togglebutton left of Slider
 //todo: public private nochmal genau anschauen, was und warum setzt man sie?
 //todo: Volume Slider stylen ein Stück weit wie ProgressBar.
-//todo: nachvollziehen einzige lambda
 //todo: ProgressBar anklickbar machen und Lied zur Stelle vorspulen
 //todo: kleine Popups bei Mouseover: ProgressBar Minute:Sekunde, über TableColumn gesamter Inhalt, ebenso über TreeItem.
 //todo: allow multiple selection during ctrl-click, probably redesign method with array for selection
 //todo: idee: während drag auf ProgressBar per Tastendruck (oder drag out of bounds?) Tonspur anzeigen lassen
+
 package org.example.musikplayer_doit.controller;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -38,7 +47,6 @@ import org.example.musikplayer_doit.services.TreeViewBuilder;
 
 import java.io.File;
 import java.io.FilenameFilter;
-import java.util.Arrays;
 import java.util.HashMap;
 
 public class Controller {
@@ -119,6 +127,7 @@ public class Controller {
         TreeViewBuilder treeViewBuilder = new TreeViewBuilder(folderTreeView);
         treeViewBuilder.initializeTreeView();
         treeViewBuilder.applyCellFactory();
+        treeViewBuilder.buildTree(File.listRoots());
         trackBorderPaneFocus();
         centerTableViewClearHandler();
         playingTableViewClearHandler();
@@ -134,7 +143,6 @@ public class Controller {
         // Initialize Queue
         queue = new Playlist();
 
-        //CellValueFactories noch nicht ausgelasgert
         queueTitleColumn.setCellValueFactory(new PropertyValueFactory<>("title"));
         queueLengthColumn.setCellValueFactory(new PropertyValueFactory<>("length"));
         titleColumn.setCellValueFactory(new PropertyValueFactory<>("title"));
