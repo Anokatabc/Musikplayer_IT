@@ -23,8 +23,6 @@ public class MP3FileMetadataExtractor {
                 AudioFile audioFile = AudioFileIO.read(file);
                 Tag tag = audioFile.getTag();
                 if (tag != null) {
-//                    String extractedAlbum = tag.getFirst(FieldKey.ALBUM);
-//                    s.setAlbum(extractedAlbum);
                     s.addMetadata("Album", tag.getFirst(FieldKey.ALBUM));
                     //s.addMetadata("Title", tag.getFirst(FieldKey.TITLE));
                     s.addMetadata("Artist", tag.getFirst(FieldKey.ARTIST));
