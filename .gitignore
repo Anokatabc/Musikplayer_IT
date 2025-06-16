@@ -4,14 +4,11 @@ target/
 !**/src/test/**/target/
 
 # Build-Ordner
-target
 out/
-build/
 logs/
 
 # IDE
-.idea/
-*.iml
+
 
 # OS
 .DS_Store
@@ -23,6 +20,7 @@ Thumbs.db
 .idea/jarRepositories.xml
 .idea/compiler.xml
 .idea/libraries/
+.idea/
 *.iws
 *.iml
 *.ipr
