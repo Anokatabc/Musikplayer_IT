@@ -73,19 +73,19 @@
       <SplitPane dividerPositions="0.22705314009661837, 0.8367149758454107" prefHeight="160.0" prefWidth="200.0" BorderPane.alignment="CENTER">
         <items>
             <TreeView fx:id="folderTreeView" minWidth="10.0" onMouseClicked="#selectTreeItem" prefHeight="580.0" prefWidth="381.0" />
-            <TableView fx:id="centerTableView" minWidth="10.0" onMouseClicked="#selectTableItem" prefHeight="580.0" prefWidth="187.0">
+            <TableView fx:id="centerTableView" minWidth="10.0" prefHeight="580.0" prefWidth="187.0">
                <columns>
                   <TableColumn fx:id="titleColumn" prefWidth="131.0" text="Title" />
                   <TableColumn fx:id="lengthColumn" prefWidth="131.0" text="Length" />
+                  <TableColumn fx:id="albumColumn" prefWidth="131.0" text="Album" />
+                  <TableColumn fx:id="artistColumn" prefWidth="131.0" text="Artist" />
                   <TableColumn fx:id="pathColumn" prefWidth="131.0" text="Path" />
-                  <TableColumn prefWidth="131.0" text="Album" />
-                  <TableColumn prefWidth="131.0" text="Artist" />
                </columns>
             </TableView>
             <TableView fx:id="playingTableView" minWidth="10.0" prefHeight="580.0" prefWidth="191.0">
                <columns>
-                  <TableColumn fx:id="queueTitleColumn" prefWidth="100.0" text="Title" />
-                  <TableColumn fx:id="queueLengthColumn" prefWidth="100.0" text="Length" />
+                  <TableColumn fx:id="queueTitleColumn" prefWidth="105.0" text="Title" />
+                  <TableColumn fx:id="queueLengthColumn" prefWidth="61.0" text="Length" />
                </columns>
             </TableView>
         </items>

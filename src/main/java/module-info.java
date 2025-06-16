@@ -7,6 +7,7 @@ module org.example.musikplayer_doit {
     requires org.kordamp.ikonli.javafx;
     requires jaudiotagger;
     requires java.desktop;
+    requires java.logging;
 
 
     opens org.example.musikplayer_doit.model to javafx.base;

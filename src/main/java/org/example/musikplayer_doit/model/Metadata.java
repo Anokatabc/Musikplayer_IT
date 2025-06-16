@@ -10,7 +10,7 @@ public class Metadata {
     private String album;
     private String genre;
     private String mood;
-    private Byte[] coverImage;
+    private byte[] coverImage;
     private String coverImagePath;
 
     public String getTitle() {
@@ -69,11 +69,11 @@ public class Metadata {
         this.mood = mood;
     }
 
-    public Byte[] getCoverImage() {
+    public byte[] getCoverImage() {
         return coverImage;
     }
 
-    public void setCoverImage(Byte[] coverImage) {
+    public void setCoverImage(byte[] coverImage) {
         this.coverImage = coverImage;
     }
 

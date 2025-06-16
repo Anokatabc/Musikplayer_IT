@@ -1,6 +1,8 @@
+//debugging thread: Thread.currentThread().getName()
+// oder Platform.isFxApplicationThread()
+
 //done: delete listener -> delete song from queue
-//todo last today: message Craig, describe app and ask in what way he might be able to help. first think about metadata model storage because this is significant.
-//todo after: implementation jaudiotagger, read metadata
+//done: implementation jaudiotagger, read metadata
 // -store metadata in Map (file? archive?)
 // -comprehend TableColumn method - TableRowCellFactory w/e?
 // -apply metadata to TableColumns
@@ -10,11 +12,25 @@
 // error handling
 // audioFile.getTag().getFirst(FieldKey.TITLE) to get specific fields
 // use absolute file path. Alternatively use hash to identify file uniquely
-//todo likely last: design and implement SQLite database for "caching" beyond runtime.
 // -refine and enhance implementation: design efficiency and safety, call/update/synchronization
+
+// import org.jaudiotagger.audio.AudioFile;
+//import org.jaudiotagger.audio.AudioFileIO;
+//import org.jaudiotagger.audio.exceptions.CannotReadException;
+//import org.jaudiotagger.audio.exceptions.CannotWriteException;
+//import org.jaudiotagger.tag.Tag;
+//import org.jaudiotagger.tag.id3.ID3v1Tag;
+//import org.jaudiotagger.tag.id3.ID3v24Tag;
+//
+//import java.io.File;
+//
+
 package org.example.musikplayer_doit.controller;
 //test 13
 // import javafx.application.Platform;
+
+import java.net.URI;
+
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -27,7 +43,6 @@ import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.BorderPane;
@@ -35,25 +50,22 @@ import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.util.Callback;
 import javafx.util.Duration;
-import org.example.musikplayer_doit.model.Metadata;
+import org.example.musikplayer_doit.model.MP3FileMetadataExtractor;
 import org.example.musikplayer_doit.model.Playlist;
 import org.example.musikplayer_doit.model.Song;
-import org.example.musikplayer_doit.services.ContextMenuService;
-
-import org.example.musikplayer_doit.services.TreeViewBuilderService;
-import org.jaudiotagger.tag.Tag;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.Map;
 
 //todo: user option to set root folder
 
 public class Controller {
 
-    MediaPlayer player;
-
+    private MediaPlayer player;
 
     @FXML
     private TreeView<File> folderTreeView;
@@ -61,12 +73,20 @@ public class Controller {
     private TableView<Song> centerTableView;
     @FXML
     private TableView<Song> playingTableView;
+
     @FXML
-    private TableColumn<File, String> titleColumn; //TableColumn<S, T> S=Datentyp von TableView, T=Datentyp in Spalte
+    private TableColumn<Song, String> albumColumn;
     @FXML
-    private TableColumn<File, String> pathColumn;
+    private TableColumn<Song, String> titleColumn; //TableColumn<S, T> S=Datentyp von TableView, T=Datentyp in Spalte
     @FXML
-    private TableColumn<File, String> lengthColumn;
+    private TableColumn<Song, String> pathColumn;
+    @FXML
+    private TableColumn<Song, String> artistColumn;
+
+
+
+    @FXML
+    private TableColumn<Song, String> lengthColumn;
     @FXML
     private TableColumn<Song, String> queueTitleColumn;
     @FXML
@@ -74,9 +94,10 @@ public class Controller {
     @FXML
     private ProgressBar progressBar;
     @FXML
-    private Label barTimer;
+    private TableColumn<Song, String> noColumn;
+
     @FXML
-    private Tooltip barTooltip;
+    private Label barTimer;
     @FXML
     Slider volumeSlider;
     @FXML
@@ -86,20 +107,19 @@ public class Controller {
     @FXML
     BorderPane borderPane;
 
-
     private Node previousFocus;
     private int loopCount;
-    public Song selectedSong;
-    public Song currentSong;
-    ContextMenuService contextMenuService;
-    TreeViewBuilderService treeViewBuilderService;
-
-
-
+    private int previousIndex = 0;
+    private int countingIndex;
+    private Song selectedSong;
+    private Song currentSong;
+    private boolean autoPlay;
+    MP3FileMetadataExtractor mp3FileMetadataExtractor;
 
     public ObservableList<Song> centerList = FXCollections.observableArrayList();
     //public ObservableList<Song> queue = FXCollections.observableArrayList();
     Playlist queue;
+    private ObservableList<Song> currentQueue;
 
 //mostly done: initialize() abspecken (auslagern)
 
@@ -108,98 +128,30 @@ public class Controller {
         initializeTreeView();
         applyCellFactory();
         trackBorderPaneFocus();
+        centerTableViewClearHandler();
+        playingTableViewClearHandler();
+        initializeVolumeSlider();
         handleVolumeSlider();
+        initializeCenterTableViewListener();
+        initializePlayingTableViewListener();
+
         //MouseEventService mouseEventService;
         centerTableView.requestFocus();
         //barTimer.setText("00:00");
-        volumeSlider.setMin(0);
-        volumeSlider.setMax(1);
-        volumeSlider.setValue(0.2);
+
         // Initialize the Playlist
         queue = new Playlist();
+
 
         // Set the items of the playingTableView to the Playlist's queue
         //centerTableViewClickOrKeyPressEventHandler();
         //playingTableViewClickOrKeyPressEventHandler();
         //private void centerTableViewClickOrKeyPressEventHandler();
         //private void playingTableViewClickOrKeyPressEventHandler();
-        centerTableView.setOnMouseClicked(event -> {
-            if (event.isAltDown()) {
-                if (event.getClickCount() == 2) {
-                    singlePlay();
-                }
-            } else if (event.isControlDown()) {
-                if (event.getClickCount() == 2) {
-                    addToQueue();
-                }
-            } else {
-                if (event.getClickCount() == 2) {
-                    handleEnterOrDoubleClickCenterTableView();
-                }
-            }
-        });
-        centerTableView.setOnKeyPressed(keyEvent -> {
-            if (keyEvent.isAltDown()) {
-                if (keyEvent.getCode() == KeyCode.ENTER) {
-                    singlePlay();
-                }
-            } else if (keyEvent.isControlDown()) {
-                if (keyEvent.getCode() == KeyCode.ENTER) {
-                    addToQueue();
-                }
-            } else {
-                if (keyEvent.getCode() == KeyCode.ENTER) {
-                    handleEnterOrDoubleClickCenterTableView();
-                }
-            }
-            if (keyEvent.getCode() == KeyCode.SPACE) {
-                if (player != null) {
-                    if (player.getStatus() == MediaPlayer.Status.PLAYING) {
-                        System.out.println("(Spacebar) Playback paused from "+player.getStatus());
-                        player.pause();
-                    }
 
-                    if (player.getStatus() == MediaPlayer.Status.PAUSED || player.getStatus() == MediaPlayer.Status.HALTED|| player.getStatus() == MediaPlayer.Status.STOPPED) {
-                        System.out.println("(Spacebar) Playback resumed from "+player.getStatus());
-                        player.play();
-                    }
-                }
-            }
-        });
-        playingTableView.setOnMouseClicked(event -> {
-            if (event.getClickCount() == 2) {
-                handleEnterOrDoubleClickPlayingTableView();
-            }
-        });
 
-        playingTableView.setOnKeyPressed(keyEvent -> {
-            if (keyEvent.getCode() == KeyCode.ENTER) {
-                handleEnterOrDoubleClickPlayingTableView();
-            }
-
-            if (keyEvent.getCode() == KeyCode.SPACE) {
-                if (player != null) {
-                    if (player.getStatus() == MediaPlayer.Status.PLAYING) {
-                        System.out.println("(Spacebar) Playback paused from "+player.getStatus());
-                        player.pause();
-                    }
-
-                    if (player.getStatus() == MediaPlayer.Status.PAUSED || player.getStatus() == MediaPlayer.Status.HALTED|| player.getStatus() == MediaPlayer.Status.STOPPED) {
-                        System.out.println("(Spacebar) Playback resumed from "+player.getStatus());
-                        player.play();
-                    }
-                }
-            }
-            playingTableView.setOnKeyPressed(new EventHandler<KeyEvent>() {
-                @Override
-                public void handle(KeyEvent keyEvent) {
-                    if (keyEvent.getCode() == KeyCode.DELETE){
-                        deleteSongFromQueue();
-                    }
-                }
-            });
-        });
         queueTitleColumn.setCellValueFactory(new PropertyValueFactory<>("title"));
+        queueLengthColumn.setCellValueFactory(new PropertyValueFactory<>("length"));
         //queueLengthColumn.setCellValueFactory(new PropertyValueFactory<>("songLength"));
 //        playingTableView.setOnMouseClicked(event -> {
 //            if (event.getClickCount() == 2) {
@@ -216,9 +168,7 @@ public class Controller {
 
     }
 
-    private void handleKeyPress(KeyEvent event){
 
-    }
 
 
 
@@ -227,18 +177,61 @@ public class Controller {
     // Multithreading: https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ForkJoinPool.html
 private long startTime;
 
+    //    // Recursive method to create TreeItems up to given depth
+    //    private TreeItem<File> createNode(File file, int currentDepth) {
+    //        TreeItem<File> treeItem = new TreeItem<>(file);
+    //
+    //        if (file.isDirectory() && currentDepth < MAX_DEPTH) {
+    //            File[] files = file.listFiles(pathname -> pathname.isDirectory());
+    //            if (files != null) {
+    //                for (File child : files) {
+    //                    treeItem.getChildren().add(createNode(child, currentDepth + 1));
+    //                }
+    //            }
+    //        }
+    //        return treeItem;
+    //    }
+
+    //💡 Optional: Lazy Loading (Performance Tip)
+    //To avoid long loading times and memory usage, load child folders only when a node is expanded:
+    //
+    //
+    //treeItem.addEventHandler(TreeItem.branchExpandedEvent(), event -> {
+    //    TreeItem<File> item = event.getSource();
+    //    if (item.getChildren().isEmpty()) {
+    //        loadChildren(item, currentDepth + 1);
+    //    }
+    //});
+
+    //Lazy Loading (Optimization - optional but highly recommended): Instead of loading the entire file system at once, implement lazy loading to improve performance and responsiveness:
+    //Initially, only load the immediate children (folders) of a folder when the user expands its TreeItem in the TreeView.
+    //Use a mechanism (e.g., a boolean flag on the TreeItem) to indicate whether the children of a TreeItem have already been loaded.
+    //When the user expands a TreeItem:
+    //Check the "loaded" flag.
+    //If not loaded, call the recursive function to scan subfolders up to the maxDepth. This part is the same as described above, but only triggered on demand.
+    //Set the "loaded" flag to true.
+
+            //Lazy Loading (Optimization - optional but highly recommended): Instead of loading the entire file system at once, implement lazy loading to improve performance and responsiveness:
+    //Initially, only load the immediate children (folders) of a folder when the user expands its TreeItem in the TreeView.
+    //Use a mechanism (e.g., a boolean flag on the TreeItem) to indicate whether the children of a TreeItem have already been loaded.
+    //When the user expands a TreeItem:
+    //Check the "loaded" flag.
+    //If not loaded, call the recursive function to scan subfolders up to the maxDepth. This part is the same as described above, but only triggered on demand.
+    //Set the "loaded" flag to true.
+
     public void initializeTreeView(){
         folderTreeView.setMouseTransparent(true);
         folderTreeView.setOpacity(0.5);
         File rootFile = new File("D:/");
+        if(rootFile.listFiles() != null){
+            System.out.println("Loading directories from D:/...");
+        } else {
+            System.out.println("no directories found");
+            return;
+        }
         TreeItem<File> rootItem = new TreeItem<>(rootFile);
         folderTreeView.setRoot(rootItem);
 
-                // ForkJoinPool für parallele Verarbeitung
-//                ForkJoinPool pool = new ForkJoinPool();
-//                pool.invoke(new FolderScanTask(rootFile, rootItem));
-
-        //Anonyme Klasse von Task wird erstellt und instanziiert
         Task<Void> task = new Task<>() {
             @Override
             protected Void call() {
@@ -247,9 +240,10 @@ private long startTime;
                 return null;
             }
         };
+
         //Kurzschreibweise:
         //        Task<Void> task = new Task<>(() -> {
-        //            createTree(rootFile, rootItem);
+        //           createTree(rootFile, rootItem);
         //            return null;
         //        });
         task.setOnSucceeded(_ -> {
@@ -263,6 +257,14 @@ private long startTime;
         new Thread(task).start();
     }
 
+    private boolean containsMP3Files (File directory) {
+            if (directory.isDirectory()){
+                File[] checkMP3File = directory.listFiles((dir, name) -> name.toLowerCase().endsWith(".mp3"));
+                return checkMP3File != null && checkMP3File.length > 0;
+            }
+            return false;
+    }
+
     //loopCount als Instanzvariable deklariert verhindert (versehentliche) Überschreibung durch Methoden
     //Dies hat zu tun mit Object State.
     //Instanzvariablen sind deklariert auf Klassenebene. Initialisierung erfolgt mit Instanziierung der Klasse.
@@ -274,26 +276,59 @@ private long startTime;
 
     //TreeView::getExpandedItemCount() // folderTreeView.getExpandedItemCount()
 
-    private void createTree(File file, TreeItem<File> parentItem) {
+//alternative createTree method:
+    private void createTree(File file, TreeItem<File> parentItem){
+
         File[] files = file.listFiles(File::isDirectory);
-        if (files != null) {
-            List<TreeItem<File>> batch = new ArrayList<>();
-            for (var f : files) {
-                //infer filetype <>
-                loopCount += 1;
-                System.out.println("Scanned: "+loopCount+" of x");
-                TreeItem<File> item = new TreeItem<>(f);
-                batch.add(item);
-                createTree(f, item);
+
+        if (files == null){
+            System.out.println("No files found, cannot build Tree");
+            return;
+        }
+            for (var f : files){
+                if (containsMP3Files(f) && f.isDirectory()){
+                    TreeItem<File> treeItem = new TreeItem<>(f);
+                    parentItem.getChildren().add(treeItem);
+                    createTree(f, treeItem);
+                    loopCount++;
+                    System.out.println("Scanned: "+loopCount+" of x");
+                }
             }
 
-            //Platform.runLater(() -> {
-                parentItem.getChildren().addAll(batch);
-                //folderTreeView.layout();
-           // }); // Batch-Update
-            //folderTreeView.setCellFactory(new Callback<TreeView<File>, TreeCell<File>>() {
-        }
     }
+
+//    private void createTree(File file, TreeItem<File> parentItem) {
+//        File[] files = file.listFiles(File::isDirectory);
+//        int maxDepth = 50;
+//        int depth = 0;
+//        if (files != null) {
+//            List<TreeItem<File>> batch = new ArrayList<>();
+//            for (var f : files) {
+//                if (depth > maxDepth){
+//                    break;
+//                }
+//                depth++;
+//                if (!f.canRead()){
+//                    //if clause to skip unreadable files
+//                    System.out.println("File not readable: "+f.getAbsolutePath());
+//                    continue;
+//                }
+//                //infer filetype <>
+//                loopCount += 1;
+//                System.out.println("Scanned: "+loopCount+" of x");
+//                TreeItem<File> item = new TreeItem<>(f);
+//                batch.add(item);
+//                createTree(f, item);
+//            }
+//
+//            //Platform.runLater(() -> {
+//                parentItem.getChildren().addAll(batch);
+//                //folderTreeView.layout();
+//           // }); // Batch-Update
+//            //folderTreeView.setCellFactory(new Callback<TreeView<File>, TreeCell<File>>() {
+//        }
+//    }
+
 //    private void createTree(File file, TreeItem<File> parentItem) {
 //            File[] files = file.listFiles(File::isDirectory);
 //
@@ -484,10 +519,6 @@ private long startTime;
 //        };
 //} // end of code block
 
-
-
-
-
     /*
     public void initialize() {
 //        TreeItem<File> rootItem = new TreeItem<File> "C://";
@@ -522,7 +553,7 @@ private long startTime;
 //        button.setTooltip();
     }
 
-
+//Hintergrund: Fokus auf Auswahl behalten...
     private void trackBorderPaneFocus(){
         borderPane.sceneProperty().addListener((observable, oldScene, newScene) -> {
             if (newScene != null) {
@@ -538,7 +569,7 @@ private long startTime;
     //done: Volume Slider responsiv machen. Problem: Scheint nur zwischen 0 und 100 zu wechseln. Lösung: MediaPlayer hat Volume zwischen 0 - 1, Slider 0 - 100.
     //volumeSlider Error Handling mit Null Check
     //todo: Volume Slider stylen ein Stück weit wie ProgressBar.
-    //todo: sicherstellen dass volumeSlider und playerVolume stets synchronisiert sind.
+    //done: sicherstellen dass volumeSlider und playerVolume stets synchronisiert sind.
     @FXML
     private void handleVolumeSlider () {
         //volumeSlider.minProperty().setValue(0);
@@ -552,7 +583,7 @@ private long startTime;
         //}));
 
         if (player == null){
-            System.out.println("No player instance found, cannot set volume. Will be updated on playback within 0.05 margin of error.");
+            System.out.println("No player instance found, cannot set volume. Will be updated on playback within 0.05 margin of deviation.");
         }
         volumeSlider.addEventFilter(ScrollEvent.SCROLL, scrollEvent -> {
             double delta = scrollEvent.getDeltaY() > 0 ? 0.05 : -0.05;
@@ -573,7 +604,7 @@ private long startTime;
 //        volumeSlider.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
 //
 //        });
-        //todo: idealerweise gar nicht erst Fokus auf VolumeSlider erlauben, und all dies sparen
+        //done: idealerweise gar nicht erst Fokus auf VolumeSlider erlauben, und all dies sparen
             volumeSlider.addEventFilter(MouseEvent.MOUSE_RELEASED, event -> {
             if (previousFocus != null) {
                 previousFocus.requestFocus(); // Setze den Fokus zurück
@@ -597,12 +628,7 @@ private long startTime;
                     });
                 }
             }
-
         });
-
-
-
-
     }
 
     private void setProgressBar() {
@@ -646,30 +672,24 @@ private long startTime;
             player.dispose();
             System.out.println("Player instance detected and disposed, create new instance...");
         }
-//        Platform.runLater(() -> {...});
+        if (selectedSong == null){
+            System.err.println("[[playSelection]]: selectedSong is null, returning...");
+            //return;
+        }
         Media newPlayback = songToMedia(selectedSong);
         player = new MediaPlayer(newPlayback);
-        System.out.println("Playing after double click or enter press: "+newPlayback+", which is the same as "+selectedSong.getTitle());
-
-//        Task<Void> task = new Task<>() {
-//                @Override
-//                protected Void call() {
-//                    initiatePlay();
-//                    return null;
-//                }
-//            };
-//            task.setOnSucceeded(_ -> player.play();)
-//            new Thread(task).start();
-
-
+        currentQueue = queue.getQueue();
+        System.out.println("Playing after double click or enter press newPlayBack: "+newPlayback+", which is the same as selectedSong.getTitle(): "+selectedSong.getTitle());
         initiatePlay();
         player.play();
     }
+
     private void initiatePlay () {
+        System.out.println("[[initiatePlay]]: Method called.");
+        setCurrentSong();
         setProgressBar();
         player.setVolume(volumeSlider.getValue());
         transformPlayButton();
-        setCurrentSong();
         styleCurrentSong();
         playerBehavior();
     }
@@ -690,9 +710,13 @@ private long startTime;
         playingTableView.setRowFactory(tv -> new TableRow<>() {
             @Override
             protected void updateItem(Song item, boolean empty) {
+                if (item == null && currentSong == null){
+                    return;
+                }
                 super.updateItem(item, empty);
                 if (item != null && item.equals(currentSong)) {
                     setStyle("-fx-font-weight: bold;");
+                    System.out.println("[[styleCurrentSong]]: set currentSong "+currentSong.getPath()+" bold");
                 } else {
                     setStyle(""); // Reset style for other rows
                 }
@@ -727,17 +751,28 @@ private long startTime;
 //        player.setOnEndOfMedia(() -> {
 //            playNextOrStop();
 //                });
-        if (player == null){
+        autoPlay = true;
+        if (player == null) {
             return;
         }
         player.setOnEndOfMedia(new Runnable() {
             @Override
             public void run() {
-                System.out.println("endOfMedia triggered by method playerBehavior();");
-                progressBar.setProgress(0);
-                playNextOrStop();
+                //if
             }
         });
+        //Autoplay: on
+        player.setOnEndOfMedia(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("endOfMedia triggered by method playerBehavior();");
+                if (autoPlay) {
+                    progressBar.setProgress(0);
+                    playNextOrStop();
+                }
+            }
+        });
+
     }
     //mostly done: clickPlay auslagern / abspecken
     //done: Timer updaten
@@ -770,24 +805,34 @@ private long startTime;
             player.dispose();
         }
         selectedSong = playingTableView.getSelectionModel().getSelectedItem();
-        Media assignPlay = songToMedia(selectedSong);
-        player = new MediaPlayer(assignPlay);
-        playSelection();
+        System.out.println("[DoubleClick or Enter PlayingTableView]: Selected Song: "+playingTableView.getSelectionModel().getSelectedItem());
+        Media newPlayback = songToMedia(selectedSong);
+        System.out.println("[DoubleClick or Enter PlayingTableView]: Assigning new Media to play: "+newPlayback);
+        player = new MediaPlayer(newPlayback);
+        player.play();
         initiatePlay();
     }
 
     private void handleEnterOrDoubleClickCenterTableView() {
-        queue.clearQueue();
-        ObservableList<Song> newQueue = FXCollections.observableArrayList(centerTableView.getItems());
-        queue.setQueue(newQueue);
-        playingTableView.setItems(queue.getQueue());
-        for (var song : queue.getQueue()){
-
-            System.out.println("Added: "+song.getTitle());
-        }
         selectedSong = centerTableView.getSelectionModel().getSelectedItem();
+//        for (var s : centerList){
+//            System.out.println("lookup Metadata: "+s.getAlbum());
+//            System.out.println("lookup Metadata: "+s.getTitle());
+//            System.out.println("lookup Metadata: "+s.getPath());
+//        }
+        if (queue != null){
+            queue.clearQueue();
+        }
+        ObservableList<Song> newQueueItems = FXCollections.observableArrayList(centerTableView.getItems());
+        queue.setQueue(newQueueItems);
+        playingTableView.setItems(queue.getQueue());
+        if (queue.getQueue() != null){
+            for (var song : queue.getQueue()){
+                System.out.println("Added: "+song.getTitle());
+            }
+        }
         playSelection();
-        System.out.println("Metadata: "+currentSong.getMetadata());
+//        System.out.println("Metadata: "+currentSong.getMetadata());
         //        if (player == null||player.getStatus() == MediaPlayer.Status.STOPPED) {
 //
 //            player = new MediaPlayer(new Media(new File(selectedSong.getPath()).toURI().toString()));
@@ -830,16 +875,28 @@ private long startTime;
         playSelection();
         initiatePlay();
         //todo: allow multiple selection during ctrl-click, probably redesign method with array for selection
+        // außerdem strg+A für alle auswählen
+
     }
     private void addToQueue(){
         selectedSong = centerTableView.getSelectionModel().getSelectedItem();
         queue.addSong(selectedSong);
         System.out.println("Song successfully added to queue.");
     }
+
     private void deleteSongFromQueue(){
+        countingIndex = queue.getIndexOf(currentSong);
         selectedSong = playingTableView.getSelectionModel().getSelectedItem();
         queue.removeSong(selectedSong);
         System.out.println("Song successfully deleted from queue.");
+        if (!queue.contains(currentSong)){
+            System.err.println("Warning: currentSong deleted, initialized previousIndex variable minus 1");
+            if (countingIndex > 1){
+                previousIndex = countingIndex-1;
+            } else if (countingIndex == 1){
+                previousIndex = 1;
+            }
+        }
     }
 
     @FXML
@@ -893,70 +950,165 @@ private long startTime;
 
     private String parseSourceToPath(String mediaSource){
 
-        String sourceToPath = mediaSource.replace("%20", " ");
-        sourceToPath = sourceToPath.replace("file:/", "");
-        sourceToPath = sourceToPath.replace("/", "\\");
+//        String sourceToPath = mediaSource.replace("%20", " ");
+//        sourceToPath = sourceToPath.replace("file:/", "");
+//        sourceToPath = sourceToPath.replace("/", "\\");
+        try {
+               String sourceToPath =  URLDecoder.decode(mediaSource, StandardCharsets.UTF_8)
+                                //.replace("File:/", "")
+                                .replace("/", "\\");
+                        return sourceToPath;
 
-                return sourceToPath;
+        } catch (Exception e) {
+            System.err.println("could not handle"+mediaSource+" - - "+e.getMessage());
+            return mediaSource;
+        }
+
+
+
     }
 
-    private Song findSongByPath(ObservableList<Song> songList, String path){
-        for (var s : songList){
-            if (s.getPath().equals(path)){
-                System.out.println("return statement of findSongByPath(): "+s);
+    private Song findSongByPath(ObservableList<Song> currentQueue, String mediaSourceToPath){
 
-                return s;
+        for (var s : currentQueue){
+            if (s != null){
+                if (s.getPath().equals(mediaSourceToPath)){
+                    return s;
+                }
             }
         }
+        //        for (var s : songList){
+//            String file = new File(s.getPath()).toURI().toString();
+//            if (file.equals(player.getMedia().getSource())){
+//                System.err.println("identified currentSong via URI: "+file+", transmitting info to setCurrentSong");
+//                return s;
+//            }
+//        }
+//            if (s.getPath().equals(path)){
+//                System.out.println("[[findSongByPath]]: return statement of findSongByPath(): " +
+//                        "\n[[findSongByPath]]: currentSong object 's' is called "+s+"," +
+//                        "\n[[findSongByPath]]:  whose path is s.getPath()=       "+s.getPath()+"," +
+//                        "\n[[findSongByPath]]:  which is equal to parameter path="+path);
+
+
         return null;
     }
-//todo: test and fix with headphones
-    private void playPrevious(){
-        if (player == null) {
-            System.out.println("No player instance found.");
-            return;
-        }
-        ObservableList<Song> currentQueue = queue.getQueue();
-        int currentSongIndex = currentQueue.indexOf(currentSong);
-        Song previousSong;
-        if (currentSongIndex == currentQueue.size()-1){
-            player.seek(Duration.ZERO);
-            System.out.println("No song before the current song in queue, playback set to 0 and continuing.");
-        } else {
-            previousSong = currentQueue.get(currentSongIndex-1);
-            System.out.println("Setting previous song: "+previousSong);
-        }
+
+//done: test and fix with headphones
+private void playPrevious() {
+    System.out.println("current queue contains: "+currentQueue);
+        if (currentQueue.isEmpty()) {
+        System.err.println(">playPrevious: currentQueue is empty.");
+        return;
+    }
+
+    if (player == null) {
+        System.out.println("[[playPrevious]]: No player instance found.");
+        return;
+    }
+
+
+    if (currentSong == null) {
+        System.err.println("[[playPrevious]]: No currentSong found, returning...");
+        return;
+    }
+
+    int currentSongIndex = currentQueue.indexOf(currentSong);
+    System.out.println("[[playPrevious]]: index of currentSong: " + currentSongIndex);
+    System.out.println("[[playPrevious]]: current queue size: " + currentQueue.size());
+
+    if (currentSongIndex == 0) {
+        player.seek(Duration.ZERO);
+        System.out.println("[[playPrevious]]: No song before the current song in queue, playback set to 0 and continuing.");
+    } else {
+        Song previousSong = (currentSongIndex == -1)
+                ? currentQueue.get(previousIndex)
+                : currentQueue.get(currentSongIndex - 1);
+
+        System.out.println("[[playPrevious]]: Setting previous song: " + previousSong);
+        currentSong = previousSong;
+        initializeAndPlay(previousSong);
+    }
+}
+
+    private void initializeAndPlay(Song song) {
+        Media media = songToMedia(song);
+        System.out.println("[[initializeAndPlay]]: Stopping playback and setting media: " + media);
+        player.stop();
+        player.dispose();
+        player = new MediaPlayer(media);
+        player.play();
+        initiatePlay();
     }
 
     private void setCurrentSong(){
-        System.out.println("Method called: setCurrentSong (by initiatePlay())");
-        ObservableList<Song> currentQueue = queue.getQueue();
-        String currentMediaSource = player.getMedia().getSource();
-        System.out.println("currentMediaSource: "+currentMediaSource);
-        String sourceToPath = parseSourceToPath(currentMediaSource);
-        System.out.println("sourceToPath: "+sourceToPath);
-        currentSong = findSongByPath(currentQueue, sourceToPath);
-        System.err.println("Current song as determined by setCurrentSong: "+sourceToPath);
-    }
-
-    //done: potentiell auslagern in "private Song determineCurrentSong(ObservableList<Song> list)?"
-    private void playNextOrStop() {
-        System.out.println("Method call: playNextOrStop.");
-        if (player == null) {
-            System.out.println("No player found.");
+//        System.out.println("Method called: setCurrentSong (by initiatePlay())");
+//
+//        ObservableList<Song> currentQueue = queue.getQueue();
+//        String currentMediaSource = player.getMedia().getSource();
+//        System.out.println("Detected currentMediaSource: "+currentMediaSource);
+//
+//        //String sourceToPath = parseSourceToPath(currentMediaSource);
+//
+//        //String sourceToPath = Paths.get(currentMediaSource).toString();
+//
+//        System.out.println("sourceToPath: "+player.getMedia().getSource());
+//        currentSong = findSongByPath(currentQueue, player.getMedia().getSource());
+//
+//
+//        System.out.println("currentSong *"+currentSong+"* as determined by setCurrentSong (parseSourceToPath): "+player.getMedia().getSource()+"\ncurrentMediaSource:"+currentMediaSource);
+//        if (!player.getMedia().getSource().equals(currentSong)){
+//            System.err.println("Current song "+currentSong+" is not equal to media source "+currentMediaSource);
+//        }
+        if (player == null){
+            currentSong = null;
             return;
         }
 
-        ObservableList<Song> currentQueue = queue.getQueue();
+        if (player.getMedia().getSource() == null){
+            System.err.println("[[setCurrentSong]]: No media source found, currentSong is null, returning...");
+            return;
+        }
+        String currentMediaSource = player.getMedia().getSource();
+
+        String sourcePath = Paths.get(URI.create(currentMediaSource)).toString();
+
+
+        currentSong = findSongByPath(currentQueue, sourcePath);
+        if (currentSong == null) return;
+        System.out.println("[[setCurrentSong]]: currentSong, as calculated based on: " +
+                "\n[[setCurrentSong]]: current player media source (URI to String) -> "+currentMediaSource+"," +
+                "\n[[setCurrentSong]]: converted to path via Paths.get(()).toString -> "+sourcePath+"," +
+                "\n[[setCurrentSong]]: compared with each song in current queue.getQueue is -> "+
+                "\n[[setCurrentSong]]: -> "+currentSong+", its path is -> "+currentSong.getPath());
+    }
+
+    //done: potentiell auslagern in "private Song determineCurrentSong(ObservableList<Song> list)?"
+    //todo: Button für Playlist wiederholen - boolean Instanzvariable? (fragen)
+    //todo: BUtton für Sleep Timer: Mit oder ohne Volumeverringerung über Zeit.
+    //todo: playPrevious: If playback >3?5? Sekunden: seek 0 currentSong (check mediamonkey standard)
+    //todo: Speichere einfach aktuellen Index von currentSong und rufe ihn ab. Falls Index > queue.size, spiel das letzte Lied.
+    //todo: für playprevious: selbe Logik, aber -1, und falls Index > queue.size, spiel das vorletzte Lied.
+    // next: falls queue == null; stop und dispose.
+    // previous: falls queue == null, aber player != null, progress auf 0 setzen. Falls player == null, return.
+    //todo: falls nicht schon vorhanden, automatisches Playerverhalten. onEndOfMedia: schauen ob Song in Queue, welcher nicht currentSong ist. Wenn ja, playback. Wenn nein, stop (nicht dispose).
+    // fragen: "automatisches player behavior" ist nicht setzbar, oder? ist es richtig, dies mit einer Initialize-Methode bei jeder Playererstellung zu aktualisieren?
+    private void playNextOrStop() {
+        System.out.println("[[playNextOrStop]]: Method call: playNextOrStop.");
+        if (player == null) {
+            System.out.println("[[playNextOrStop]]: No player found.");
+            return;
+        }
+
         int currentSongIndex = currentQueue.indexOf(currentSong);
         Song nextSong;
         if (currentSongIndex == currentQueue.size() - 1) {
             player.stop();
-            System.out.println("No more songs in current queue, playback stopped.");
+            System.out.println("[[playNextOrStop]]: No more songs in current queue, playback stopped.");
             return;
         } else {
             nextSong = currentQueue.get(currentSongIndex + 1);
-            System.out.println("Setting next song: " + nextSong);
+            System.out.println("[[playNextOrStop]]: Setting next song: " + nextSong);
         }
         if (nextSong != null) {
             if (currentSong != null) {
@@ -965,13 +1117,16 @@ private long startTime;
                 player = new MediaPlayer(nextPlay);
                 player.play();
                 initiatePlay();
-                System.out.println("Playing next song in playlist: " + nextPlay.getSource());
+                System.out.println("[[playNextOrStop]]: Playing next song in playlist: " + nextPlay.getSource());
             }
         }
 
     }
 
     private Media songToMedia(Song song){
+        if (song == null){
+            return null;
+        }
         return new Media(new File(song.getPath()).toURI().toString());
     }
 //    private Song mediaToSong(Media media){
@@ -989,7 +1144,7 @@ private long startTime;
     }
 
 
-    //todo: use/create update playlist methods
+    //done: use/create update playlist methods
     //done: enable skipping to parts of playlist for playback
     //partially done: required steps: instantiate ObservableList in method constructor. Instantiate Playlist in initialize method. update variable names and call Playlist methods.
     @FXML
@@ -1007,22 +1162,22 @@ private long startTime;
     // create button and method for "stop after current track", which gets reset after playback stop
     // optionally configurable to not turn off on playback end.
 
-    //todo: set focus on Playlist on click
+    //done: set focus on Playlist on click
 
-    //todo: make TableView and Queue respond to keyboard input.
+    //done: make TableView and Queue respond to keyboard input.
     // Enter: clearList and add entire folder to queue and play // just play.
     // alt+Enter: clearList and add selected song to queue
     // ctrl+Enter: add selected song to queue
     // Delete: Delete file (ask permission) // remove from list.
 
-    //todo: Set new focus on arrow up/down.
+    //todo: Set new focus on arrow up/down. done?
 
     //todo: add further playback altering methods and buttons:
     // randomize playback
     // repeat playback
     // sleep timer
     // potentially advanced functions such as transpose, playback speed, equalizer
-    //todo: drag & drop in queue
+    //todo: drag & drop in and into queue
 
 
     // - - - - - - - - - - - - - - - - - - - - - TreeViewSelectionController - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1058,8 +1213,8 @@ private long startTime;
 
     @FXML
     private void selectTreeItem(MouseEvent event) {
-
         //todo: comprehend
+
         //Determine if the click was on a TreeCell
         Node clickedNode = event.getPickResult().getIntersectedNode();
         while (clickedNode != null && !(clickedNode instanceof TreeCell<?>)) {
@@ -1070,29 +1225,49 @@ private long startTime;
         if (clickedNode == null) {
             folderTreeView.getSelectionModel().clearSelection();
             // Optionally, clear the TableView as well.
+            //todo: Deselektion funktioniert noch nicht, auch nicht im TableView
             centerList.clear();
             centerTableView.setItems(centerList);
             return;
         }
 
-        // At this point, a valid TreeCell was clicked.
-        TreeItem<File> item = folderTreeView.getSelectionModel().getSelectedItem();
 
-        // Clear previous list before loading new items
+        TreeItem<File> selectedItem = folderTreeView.getSelectionModel().getSelectedItem();
+
+
         centerList.clear();
 
-        if (item != null) {
-            File data = item.getValue();
-            System.out.println("Selected: " + data);
+        if (selectedItem != null) {
+            File folder = selectedItem.getValue();
+            System.out.println("Selected: " + folder);
 
-            if (data.isDirectory()) {
+
+            //todo: plan:
+            // Verzeichnis scannen und Song-Objekte erstellen (eigenes Loop 1)
+            // Metadaten extrahieren (eigenes Loop 2) und in Map in Song speichern
+            // beide verknüpfen (ggf. in Loop 2, alternativ durch die Daten iterieren)
+            // dann in centerTableView laden
+            if (folder.isDirectory()) {
                 // List only .mp3 files in the directory.
-                File[] files = data.listFiles((_, str) -> str.toLowerCase().endsWith(".mp3"));
+                //alternative?
+                // FileChooser fileChooser = new FileChooser();
+                //         fileChooser.setTitle("Open MP3 File");
+                //         fileChooser.getExtensionFilters().addAll(
+                //                 new FileChooser.ExtensionFilter("MP3 Files", "*.mp3")
+                File[] files = folder.listFiles((_file, str) -> str.toLowerCase().endsWith(".mp3"));
+                mp3FileMetadataExtractor = new MP3FileMetadataExtractor();
                 if (files != null) {
-                    for (File f : files) {
-                        // Assume Song has a constructor that accepts the file path.
-                        Song song = new Song(f.getAbsolutePath(), null);
-                        centerList.add(song);
+                    centerList.clear();
+                    Song[] songArray = new Song[files.length];
+                    for (int i = 0; i < files.length; i++) {
+                        songArray[i] = new Song(files[i].getAbsolutePath(), new HashMap<>());
+                        System.out.println("Absolute Path used in Song construction=" + files[i].getAbsolutePath() + ", along with empty HashMap, to be filled later");
+                    }
+                    mp3FileMetadataExtractor.extractTagFromMp3(songArray);
+
+                    for (var s : songArray) {
+                        centerList.add(s);
+                        System.out.println("Added song to centerList: " + s.getTitle());
                     }
                 }
             } else {
@@ -1102,14 +1277,24 @@ private long startTime;
             System.out.println("Invalid selection");
         }
 
+
+
         // Update the TableView with the new list.
         centerTableView.setItems(centerList);
+        //System.out.println("Added to TableView centerList: "+centerList);;
+
         titleColumn.setCellValueFactory(new PropertyValueFactory<>("title"));
         pathColumn.setCellValueFactory(new PropertyValueFactory<>("path"));
+        albumColumn.setCellValueFactory(new PropertyValueFactory<>("album"));
+        lengthColumn.setCellValueFactory(new PropertyValueFactory<>("length"));
+        artistColumn.setCellValueFactory(new PropertyValueFactory<>("artist"));
+    }
+
+    public Map<String, Object> assembleMetadata(Song song){
+        return null;
     }
 
     public Map<String, Object> scanMetadata(Song file){
-        Tag metadataItem;
         Map<String, Object> metadataMap = null;
         return metadataMap;
     }
@@ -1133,7 +1318,7 @@ private long startTime;
     }
 
     //@FXML
-    //private void selectTableItem(MouseEvent event) {
+    //private void centerTableViewClearHandler(MouseEvent event) {
     //    Node clickedNode = event.getPickResult().getIntersectedNode();
     //    while (clickedNode != null && !(clickedNode instanceof TableRow<?>)) {
     //        clickedNode = clickedNode.getParent();
@@ -1161,17 +1346,36 @@ private long startTime;
     //Execution: The JavaFX runtime maintains a queue of tasks to be executed on the JavaFX Application Thread. The Runnable provided to Platform.runLater is added to this queue.
     //Thread Safety: By ensuring that the Runnable is executed on the JavaFX Application Thread, Platform.runLater guarantees that any UI updates within the run method are performed in a thread-safe manner, avoiding concurrency issues.
 
-    @FXML
-    private void selectTableItem(MouseEvent event) {
-        //actually not needed. Check if there is reason to keep it.
-        //can check Platform.isFxApplicationThread(). If true, is part of JavaFX main thread, and can ignore runLater.
-        //if false, platform.runlater makes code run on the main JavafX thread and enables GUI updates.
-//        Platform.runLater(new Runnable() {
-//            @Override
-//            public void run() {
-//...
-//}});
+    //done: review logic and rewrite so playingTableView selection gets detected (latter part not necessary)
+
+
+    private void centerTableViewClearHandler() {
+        centerTableView.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent event) {
                 Node clickedNode = event.getPickResult().getIntersectedNode();
+                System.out.println("Clicked node: " + clickedNode);
+
+                // Traverse the node hierarchy to find the TableRow
+                while (clickedNode != null && !(clickedNode instanceof TableRow)) {
+                    clickedNode = clickedNode.getParent();
+                }
+
+                if (clickedNode instanceof TableRow) {
+                    TableRow<?> row = (TableRow<?>) clickedNode;
+                    Object rowItem = row.getItem();
+
+                    if (rowItem instanceof Song) {
+                        Song clickedSong = (Song) rowItem;
+                        System.out.println("A Song was clicked: " + clickedSong.getTitle());
+                    } else {
+                        System.out.println("No valid Song object in the clicked row.");
+                        centerTableView.getSelectionModel().clearSelection();
+                    }
+                }
+            }
+        });
+                /*Node clickedNode = event.getPickResult().getIntersectedNode();
                 while (clickedNode != null && !(clickedNode instanceof TableRow<?>)) {
                     clickedNode = clickedNode.getParent();
                 }
@@ -1215,20 +1419,36 @@ private long startTime;
                     //todo: review
                     playingTableView.setItems(queue.getQueue());
                     queueTitleColumn.setCellValueFactory(new PropertyValueFactory<>("title"));
+                }*/
+    }
+    private void playingTableViewClearHandler() {
+        playingTableView.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent event) {
+                Node clickedNode = event.getPickResult().getIntersectedNode();
+                System.out.println("Clicked node: " + clickedNode);
+
+                // Traverse the node hierarchy to find the TableRow
+                while (clickedNode != null && !(clickedNode instanceof TableRow)) {
+                    clickedNode = clickedNode.getParent();
                 }
 
-    }
-    @FXML
-    private void showCenterContextMenu(MouseEvent event) {
-        contextMenuService.displayContextMenu(event);
-        centerTableView.setOnContextMenuRequested(e -> {
-            ContextMenu contextmenu = new ContextMenu();
+                if (clickedNode instanceof TableRow) {
+                    TableRow<?> row = (TableRow<?>) clickedNode;
+                    Object rowItem = row.getItem();
+
+                    if (rowItem instanceof Song) {
+                        Song clickedSong = (Song) rowItem;
+                        System.out.println("A Song was clicked: " + clickedSong.getTitle());
+                    } else {
+                        System.out.println("No valid Song object in the clicked row.");
+                        playingTableView.getSelectionModel().clearSelection();
+                    }
+                }
+            }
         });
-
-
-        //e ->
-        //.show(e.getScreenX(), e.getScreenY()));
     }
+
 
     private void handleCenterSelectionChange() {
         int selectedIndex = centerTableView.getSelectionModel().getSelectedIndex();
@@ -1316,7 +1536,123 @@ private long startTime;
     private void handleRefresh() {
         initialize();
     }
-}
+
+    private void initializeVolumeSlider(){
+        volumeSlider.setMin(0);
+        volumeSlider.setMax(1);
+        volumeSlider.setValue(0.2);
+    }
+
+    private void initializeCenterTableViewListener(){
+        //----------MouseEvents----------
+        centerTableView.setOnMouseClicked(event -> {
+            //click delay:
+//            PauseTransition clickDelay = new PauseTransition(Duration.seconds(0.5));
+//            clickDelay.setOnFinished(event -> {
+//                // Aktionen, die nach der Verzögerung ausgeführt werden sollen
+//            });
+            //finally add check if (!clickDelay.getStatus().equals(PauseTransition.Status.RUNNING)) {
+            Node clickedNode = event.getPickResult().getIntersectedNode();
+
+            while (clickedNode != null && !(clickedNode instanceof TableRow)) {
+                clickedNode = clickedNode.getParent();
+                System.err.println("Clicked Node (prevent play if no song was clicked): "+clickedNode);
+            }
+
+            if (clickedNode instanceof TableRow<?> row) {
+                Object item = row.getItem();
+
+                if (item instanceof Song) {
+                    if (event.isAltDown() && event.getClickCount() == 2) {
+                        singlePlay();
+                    } else if (event.isControlDown() && event.getClickCount() == 2) {
+                        addToQueue();
+                    } else if (event.getClickCount() == 2) {
+                        handleEnterOrDoubleClickCenterTableView();
+                    }
+                }
+            }
+        });
+        //done: handle enter press as no valid item is selected
+        //----------KeyEvents----------
+        centerTableView.setOnKeyPressed(keyEvent -> {
+
+            if (centerTableView.getSelectionModel().getSelectedItem() == null){
+                System.out.println(">centerTableView: no song selected, return...");
+                return;
+            }
+            if (keyEvent.isAltDown()) {
+                if (keyEvent.getCode() == KeyCode.ENTER) {
+                    selectedSong = centerTableView.getSelectionModel().getSelectedItem();
+                    singlePlay();
+                }
+            } else if (keyEvent.isControlDown()) {
+                if (keyEvent.getCode() == KeyCode.ENTER) {
+                    selectedSong = centerTableView.getSelectionModel().getSelectedItem();
+                    addToQueue();
+                }
+            } else {
+                if (keyEvent.getCode() == KeyCode.ENTER) {
+                    selectedSong = centerTableView.getSelectionModel().getSelectedItem();
+                    handleEnterOrDoubleClickCenterTableView();
+                }
+            }
+
+            if (keyEvent.getCode() == KeyCode.SPACE) {
+                if (player != null) {
+                    if (player.getStatus() == MediaPlayer.Status.PLAYING) {
+                        System.out.println("(Spacebar) Playback paused from "+player.getStatus());
+                        player.pause();
+                    }
+
+                    if (player.getStatus() == MediaPlayer.Status.PAUSED || player.getStatus() == MediaPlayer.Status.HALTED|| player.getStatus() == MediaPlayer.Status.STOPPED) {
+                        System.out.println("(Spacebar) Playback resumed from "+player.getStatus());
+                        player.play();
+                    }
+                }
+            }
+        });
+    }
+    private void initializePlayingTableViewListener(){
+
+        playingTableView.setOnMouseClicked(event -> {
+            if (playingTableView.getSelectionModel().getSelectedItem() == null){
+                System.out.println(">playingTableView: No song selected, returning...");
+                return;
+            }
+            if (event.getClickCount() == 2) {
+                selectedSong = playingTableView.getSelectionModel().getSelectedItem();
+                handleEnterOrDoubleClickPlayingTableView();
+            }
+        });
+
+        playingTableView.setOnKeyPressed(keyEvent -> {
+            if (playingTableView.getSelectionModel().getSelectedItem() == null){
+                System.out.println(">playingTableView: No song selected, returning...");
+                return;
+            }
+            if (keyEvent.getCode() == KeyCode.ENTER) {
+                selectedSong = playingTableView.getSelectionModel().getSelectedItem();
+                handleEnterOrDoubleClickPlayingTableView();
+            } else if (keyEvent.getCode() == KeyCode.SPACE) {
+                if (player != null) {
+                    if (player.getStatus() == MediaPlayer.Status.PLAYING) {
+                        System.out.println("(Spacebar) Playback paused from "+player.getStatus());
+                        player.pause();
+                    }
+
+                    if (player.getStatus() == MediaPlayer.Status.PAUSED || player.getStatus() == MediaPlayer.Status.HALTED|| player.getStatus() == MediaPlayer.Status.STOPPED) {
+                        System.out.println("(Spacebar) Playback resumed from "+player.getStatus());
+                        player.play();
+                    }
+                }
+            } else if (keyEvent.getCode() == KeyCode.DELETE){
+                        deleteSongFromQueue();
+                    }
+                });
+    }
+
+
 
 //    private ArrayList<Song> filesToTableView(ArrayList<File> file){
 //
@@ -1506,3 +1842,7 @@ public class MediaPlayerSingleton {
     }
 }
 */
+
+
+
+}
