@@ -1,139 +1,73 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.example</groupId>
     <artifactId>Musikplayer_Doit</artifactId>
     <version>1.0-SNAPSHOT</version>
 
+    <!-- ── Java 21 ──────────────────────────────────────────────────────────── -->
     <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <javafx.version>21.0.1</javafx.version>
+        <maven.compiler.release>21</maven.compiler.release>
+        <javafx.version>23.0.1</javafx.version>
+        <!-- Setze deinen Ziel-OS-Classifier fest (win / linux / mac) -->
+        <javafx.platform>win</javafx.platform>
     </properties>
 
+    <!-- ── Abhängigkeiten ───────────────────────────────────────────────────── -->
     <dependencies>
-        <!-- JavaFX Base -->
+
+        <!-- JavaFX: jedes Modul genau einmal, immer MIT classifier -->
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-base</artifactId>
-            <version>21.0.1</version>
-            <classifier>win</classifier>
+            <version>${javafx.version}</version>
+            <classifier>${javafx.platform}</classifier>
         </dependency>
-
-        <!-- JavaFX Controls -->
-        <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-controls</artifactId>
-            <version>21.0.1</version>
-            <classifier>win</classifier>
-        </dependency>
-
-        <!-- JavaFX FXML -->
-        <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-fxml</artifactId>
-            <version>21.0.1</version>
-            <classifier>win</classifier>
-        </dependency>
-
-        <!-- JavaFX Media -->
-        <!-- https://mvnrepository.com/artifact/org.openjfx/javafx-media -->
-        <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-media</artifactId>
-            <version>21.0.1</version>
-            <classifier>win</classifier>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/org.openjfx/javafx-graphics -->
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-graphics</artifactId>
-            <version>21.0.1</version>
-            <classifier>win</classifier>
+            <version>${javafx.version}</version>
+            <classifier>${javafx.platform}</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>${javafx.platform}</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-fxml</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>${javafx.platform}</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-media</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>${javafx.platform}</classifier>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org/jaudiotagger -->
+        <!-- Jaudiotagger 2.0.3  (klassisches Automodul, reicht zum Kompilieren) -->
         <dependency>
             <groupId>org</groupId>
             <artifactId>jaudiotagger</artifactId>
             <version>2.0.3</version>
         </dependency>
-
     </dependencies>
 
+    <!-- ── Basis-Build (nur Compiler‐Plugin) ────────────────────────────────── -->
     <build>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.1</version> <!-- aktuelle Maven-Version -->
+                <version>3.11.0</version>
                 <configuration>
-                    <source>21</source>
-                    <target>21</target>
                     <release>21</release>
-
-                </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.5.0</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <createDependencyReducedPom>false</createDependencyReducedPom>
-                            <artifactSet>
-                                <includes>
-                                    <include>org.openjfx:*</include>
-                                    <include>org:jaudiotagger</include>
-                                </includes>
-                            </artifactSet>
-                            <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>org.example.musikplayer_doit.App</mainClass>
-                                </transformer>
-                            </transformers>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <!--            <plugin>-->
-<!--                <groupId>org.apache.maven.plugins</groupId>-->
-<!--                <artifactId>maven-dependency-plugin</artifactId>-->
-<!--                <version>3.6.0</version>-->
-<!--                <executions>-->
-<!--                    <execution>-->
-<!--                        <id>copy-dependencies</id>-->
-<!--                        <phase>package</phase>-->
-<!--                        <goals>-->
-<!--                            <goal>copy-dependencies</goal>-->
-<!--                        </goals>-->
-<!--                        <configuration>-->
-<!--                            <outputDirectory>${project.basedir}/lib</outputDirectory>-->
-<!--                            <includeScope>runtime</includeScope>-->
-<!--                        </configuration>-->
-<!--                    </execution>-->
-<!--                </executions>-->
-<!--            </plugin>-->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.0.0</version>
-                <configuration>
-                    <argLine>
-                        --module-path Musikplayer_Doit/lib --add-modules javafx.controls,javafx.fxml,javafx.media
-                    </argLine>
                 </configuration>
             </plugin>
         </plugins>

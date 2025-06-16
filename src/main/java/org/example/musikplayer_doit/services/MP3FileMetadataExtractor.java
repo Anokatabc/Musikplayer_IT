@@ -1,5 +1,6 @@
-package org.example.musikplayer_doit.model;
+package org.example.musikplayer_doit.services;
 
+import org.example.musikplayer_doit.model.Song;
 import org.jaudiotagger.audio.AudioFile;
 import org.jaudiotagger.audio.AudioFileIO;
 import org.jaudiotagger.tag.FieldKey;
