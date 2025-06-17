@@ -73,6 +73,7 @@ public class TreeViewBuilder implements Consumer<Mp3FolderInfo> {
         task.setOnSucceeded((worker) -> {
             TreeItem<File> rootItem = task.getValue();
             folderTreeView.setRoot(rootItem);
+            System.out.println(">>>>>-----TreeView erfolgreich übergeben-----<<<<<");
             rootItem.setExpanded(true);
             folderTreeView.setMouseTransparent(false);
             folderTreeView.setOpacity(1);

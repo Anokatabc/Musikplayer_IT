@@ -21,8 +21,14 @@ public class Mp3Scanner {
 private static Mp3FolderInfo mp3FolderInfo;
 
     public static void collectMp3Folders(File[] drives, Consumer<Mp3FolderInfo> callback) {
+        if (drives == null){
+            System.err.println("Konnte keine Festplatten übergeben");
+        }
+        for (var d : drives){
+            System.out.println("Übergebene Festplatten: "+d);
+        }
 
-        Set<String> excludedFolders = Set.of("tmp","recycle","logs","\\boot","\\support","windows","program files","programdata","intellij","xampp","perflogs","system volume information","appdata","recovery","nte und einst","sicherung","gradle","shader","web_","$windows",".m2","com.","org.","\\build","repositor","features",".git","\\git\\","src","licences","savedata","save data","$w");
+        Set<String> excludedFolders = Set.of(".Msi"+"te und eins"+".msi"+"\\default","tmp","recycle","\\boot","\\support","windows","xampp","c:\\perf","system volume","recovery","sicherungs","gradle","shader","\\build",".git","\\git\\","licences","$win");
         Set<Path> allMp3Paths = new ConcurrentSkipListSet<>();
         Map<Path, Integer> mp3CountPerDir = new ConcurrentHashMap<>();
 
@@ -56,9 +62,15 @@ private static Mp3FolderInfo mp3FolderInfo;
                 Files.walkFileTree(drive.toPath(), new FileVisitor<Path>() {
                     @Override
                     public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-                        if (!Files.isReadable(dir) || !Files.isExecutable(dir)) {
+//                        if (dir.getRoot().toString().contains("C:")){
+//                            System.err.println("Betrete Verzeichnis: "+dir);
+//                        }
+                        if (!Files.isReadable(dir)) {
                             System.err.println("Unreadable or inaccessible - Skipping folder: " + dir);
                             return FileVisitResult.SKIP_SUBTREE;
+                        }
+                        if (!Files.isExecutable(dir)){
+                            System.err.println("Not filtered, but 'not executable': "+dir);
                         }
                         if (!Files.exists(dir)) {
                             System.err.println("Existiert nicht: " + dir);
@@ -104,9 +116,11 @@ private static Mp3FolderInfo mp3FolderInfo;
                     public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
                         if (exc != null) {
                             System.err.println("Fehler beim Zugriff auf " + file + ": " + exc.getClass().getSimpleName() +": "+exc.getMessage());
-                            throw new IOException(exc);
+                            //throw new IOException(exc);
                         }
-                        exc.printStackTrace();
+//                        if (exc != null){
+//                            exc.printStackTrace();
+//                       // }
                         return FileVisitResult.CONTINUE;
                         //Fehler protokollieren
                         //Invoked for a file that could not be visited.
@@ -118,7 +132,9 @@ private static Mp3FolderInfo mp3FolderInfo;
 //                        if (mp3CountPerDir.containsKey(dir)) {
 //                            allMp3Paths.add(dir);
 //                        }
-
+//                        if (dir.getRoot().toString().contains("C:")){
+//                            System.err.println("Verlasse Verzeichnis nach erfolgreicher Suche: "+dir);
+//                        }
 
                         return FileVisitResult.CONTINUE;
                         //return null;
@@ -142,7 +158,8 @@ private static Mp3FolderInfo mp3FolderInfo;
     }
 
     private static boolean isExcludedPath(Path path, Collection<String> filteredNames){
-        String lowerPath = path.toString().toLowerCase();
+        //String lowerPath = path.toString().toLowerCase();
+        String lowerPath = path.getFileName().toString().toLowerCase();
         for (String filter : filteredNames) {
             if (lowerPath.contains(filter)) {
                 //filterApplications.computeIfAbsent(filter, k -> new ArrayList<>()).add(path);
