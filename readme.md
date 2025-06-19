@@ -15,7 +15,19 @@ Das Projekt besteht aus folgenden Kernfunktionen:
 ⋅⋅⋅ sammen in der Übersicht in der Mitte dargestellt.
 3. Anhören der Musik
 ⋅⋅⋅ Hierfür habe ich einige Media-Buttons entworfen.
-..* asd
-..* asd
-- asd
-- asd
+- Play/Pause
+- Stop
+- Next
+- Previous
+- "Play Last" Toggle
+- "Repeat Queue" Toggle
+
+Mit **Doppelklick** oder **Enter** wird Zieldatei wiedergegeben, und alle Inhalte der angezeigten Liste in die 
+Playlist geladen.
+⋅⋅⋅ Mit **Strg** lässt sich diese Funktion anpassen, dass die nur die markierten Dateien zur Liste hinzugefügt
+⋅⋅⋅ werden. (Ohne Wiedergabe)
+⋅⋅⋅ Mit **Alt** lasst lässt sich die Funktion weiter anpassen, dass nur die markierten Dateien zur Liste hinzu-
+⋅⋅⋅ gefügt *und* abgespielt werden.
+Aktuell lassen sich mit **Entfernen** Musikdateien aus der aktiven Playlist löschen.
+
+Tiefere Dateisystem-Eingriffe werden noch nicht unterstützt.
