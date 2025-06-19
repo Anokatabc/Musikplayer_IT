@@ -1,7 +1,5 @@
 # JavaFX Musikplayer
-============================
-----------------------------
-
+---------------------------
 ###### Dieser Player ist das Ergebnis meines ersten größeren eigenständigen Software-Projekts.
 
 Ich habe das JavaFX-Framework für die Erstellung und Gestaltung der Benutzeroberflächeverwendet.
@@ -17,5 +15,5 @@ Das Projekt besteht aus folgenden Kernfunktionen:
 ⋅⋅⋅ sammen in der Übersicht in der Mitte dargestellt.
 3. Anhören der Musik
 ⋅⋅⋅ Hierfür habe ich einige Media-Buttons entworfen.
-⋅⋅*
-⋅⋅*
+⋅⋅* asd
+⋅⋅* asd
