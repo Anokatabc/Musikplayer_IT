@@ -15,5 +15,7 @@ Das Projekt besteht aus folgenden Kernfunktionen:
 ⋅⋅⋅ sammen in der Übersicht in der Mitte dargestellt.
 3. Anhören der Musik
 ⋅⋅⋅ Hierfür habe ich einige Media-Buttons entworfen.
-⋅⋅* asd
-⋅⋅* asd
+..* asd
+..* asd
+- asd
+- asd
