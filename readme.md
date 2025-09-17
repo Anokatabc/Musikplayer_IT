@@ -2,7 +2,7 @@
 ---------------------------
 ###### Dieser Player ist das Ergebnis meines ersten größeren eigenständigen Software-Projekts.
 
-Ich habe das JavaFX-Framework für die Erstellung und Gestaltung der Benutzeroberflächeverwendet.
+Ich habe das JavaFX-Framework für die Erstellung und Gestaltung der Benutzeroberfläche verwendet.
 Das Projekt besteht aus folgenden Kernfunktionen:
 
 1. Scannen der Festplatten
