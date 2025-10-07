@@ -1,0 +1,4 @@
+"collapse all"-Button im TreeView
+Blau in alternierenden Farben im TableView abschwächen
+Rechtsklick-Menü einbauen, insb. Option für "im Explorer öffnen", außerdem verschiedene "zur Playlist hinzufügen" Optionen
+Weißen Hintergrund abschwächen auf etwas wärmere/dunklere Farbe

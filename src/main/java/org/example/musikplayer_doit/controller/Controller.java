@@ -50,6 +50,7 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -476,26 +477,28 @@ public class Controller {
                 System.out.println("selected: "+selectedItem.getValue().toString());
                 centerList.clear();
                 Path folder = selectedItem.getValue();
-                System.out.println("Selected: " + folder.getRoot() + ": " + folder.getFileName());
-                mp3FileMetadataExtractor = new MP3FileMetadataExtractor();
-                Task<List<Song>> task = new Task<>() {
-                    List<Song> songs;
+                //System.out.println("Selected: " + folder.getRoot() + ": " + folder.getFileName());
+                System.out.println("Selected: " + folder);
 
+                mp3FileMetadataExtractor = new MP3FileMetadataExtractor();
+
+                Task<List<Song>> task = new Task<>() {
                     @Override
                     protected List<Song> call() {
-                        try (Stream<Path> contents = Files.list(folder)) {
-
-                            songs = new ArrayList<>();
-                            List<Path> fileList = new ArrayList<>(contents./*filter(Files::isRegularFile).*/toList());
-                            for (var f : fileList) {
-                                //Song song = new Song(f, new HashMap<>());
-                                Song song = new Song(f, null); //testweise
-                                mp3FileMetadataExtractor.extractTagFromMp3(song);
-                                songs.add(song);
-                                return songs;
+                        List<Song> songs = new ArrayList<>();
+                        if (Files.isDirectory(folder)) {
+                            try (Stream<Path> contents = Files.list(folder)) {
+                                contents
+                                        .filter(Files::isRegularFile)
+                                        .filter(f -> f.toString().toLowerCase().endsWith(".mp3"))
+                                        .forEach(f -> {
+                                            Song song = new Song(f, null);
+                                            mp3FileMetadataExtractor.extractTagFromMp3(song);
+                                            songs.add(song);
+                                        });
+                            } catch (IOException e) {
+                                System.err.println("Error: " + e.getMessage());
                             }
-                        } catch (IOException e) {
-                            System.err.println("Error: " + e.getMessage());
                         }
                         return songs;
                     }
@@ -503,6 +506,7 @@ public class Controller {
                 task.setOnSucceeded((workerStateEvent) -> {
                     List<Song> songs = task.getValue();
                     centerList.setAll(songs);
+
                     //songs.setAll?
                     centerTableView.setItems(centerList);
                     System.out.println("TableView updated with songs.");
@@ -1015,7 +1019,7 @@ private void cleanup() {
         if (song == null) {
             return null;
         }
-        return new Media(song.getPath().toString());
+        return new Media(song.getPath().toUri().toString());
         //return new Media(new File(song.getPath()).toURI().toString());
     }
 }

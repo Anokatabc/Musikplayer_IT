@@ -122,7 +122,7 @@ private static Mp3FolderInfo mp3FolderInfo;
                     public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
                         errorCount.incrementAndGet();
                         if (exc != null) {
-                            System.err.println("Fehler beim Zugriff auf " + file + ": " + exc.getClass().getSimpleName() +": "+exc.getMessage());
+                            System.err.println("Exception beim Zugriff auf " + file + ": " + exc.getClass().getSimpleName() +": "+exc.getMessage());
                             //throw new IOException(exc);
                         }
 //                        if (exc != null){
