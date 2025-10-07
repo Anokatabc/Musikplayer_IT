@@ -1,5 +1,6 @@
 module org.example.musikplayer_doit {
     requires javafx.controls;
+    requires javafx.graphics;
     requires javafx.fxml;
     requires javafx.media;
     requires jaudiotagger;

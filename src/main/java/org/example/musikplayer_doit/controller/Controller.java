@@ -47,14 +47,21 @@ import org.example.musikplayer_doit.services.TreeViewBuilder;
 
 import java.io.File;
 import java.io.FilenameFilter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class Controller {
 
     /// Vorsicht mit Updates, irgendeine JavaFX Bibliothek ist veraltet und darf nicht geupdated werden.
 
     @FXML
-    TreeView<File> folderTreeView;
+    TreeView<Path> folderTreeView;
     @FXML
     TableView<Song> centerTableView;
     @FXML
@@ -128,6 +135,7 @@ public class Controller {
         treeViewBuilder.initializeTreeView();
         treeViewBuilder.applyCellFactory();
         treeViewBuilder.buildTree(File.listRoots());
+
         trackBorderPaneFocus();
         centerTableViewClearHandler();
         playingTableViewClearHandler();
@@ -136,6 +144,7 @@ public class Controller {
         initializeCenterTableViewListener();
         initializePlayingTableViewListener();
         initializeButtonListener();
+        selectTreeItem();
 
         //Vermutlich nicht notwendig
         centerTableView.requestFocus();
@@ -460,76 +469,61 @@ public class Controller {
 
     // - - - - - - - - - - - - - - - - - - - - - - TableView Start - - - - - - - - - - - - - - - - - - - - - -
 //Füllt TableView nach Klick auf TreeItem
-    @FXML
-    private void selectTreeItem(MouseEvent event) {
-        TreeItem<File> selectedItem = folderTreeView.getSelectionModel().getSelectedItem();
-        centerList.clear();
+    private void selectTreeItem() {
+        folderTreeView.setOnMouseClicked(event -> {
+            TreeItem<Path> selectedItem = folderTreeView.getSelectionModel().getSelectedItem();
+            if (selectedItem != null) {
+                System.out.println("selected: "+selectedItem.getValue().toString());
+                centerList.clear();
+                Path folder = selectedItem.getValue();
+                System.out.println("Selected: " + folder.getRoot() + ": " + folder.getFileName());
+                mp3FileMetadataExtractor = new MP3FileMetadataExtractor();
+                Task<List<Song>> task = new Task<>() {
+                    List<Song> songs;
 
-        if (selectedItem != null) {
-            File folder = selectedItem.getValue();
-            System.out.println("Selected: " + folder);
-
-            if (folder.isDirectory()) {
-                Task<ObservableList<Song>> task = new Task<>() {
                     @Override
-                    protected ObservableList<Song> call() {
-                        ObservableList<Song> songs = FXCollections.observableArrayList();
-                        File[] files = folder.listFiles(new FilenameFilter() {
-                            @Override
-                            public boolean accept(File dir, String name) {
-                                return name.toLowerCase().endsWith(".mp3");
-                            }
-                        });
+                    protected List<Song> call() {
+                        try (Stream<Path> contents = Files.list(folder)) {
 
-                        if (files != null) {
-                            mp3FileMetadataExtractor = new MP3FileMetadataExtractor();
-                            Song[] songArray = new Song[files.length];
-
-                            for (int i = 0; i < files.length; i++) {
-                                songArray[i] = new Song(files[i].getAbsolutePath(), new HashMap<>());
+                            songs = new ArrayList<>();
+                            List<Path> fileList = new ArrayList<>(contents./*filter(Files::isRegularFile).*/toList());
+                            for (var f : fileList) {
+                                //Song song = new Song(f, new HashMap<>());
+                                Song song = new Song(f, null); //testweise
+                                mp3FileMetadataExtractor.extractTagFromMp3(song);
+                                songs.add(song);
+                                return songs;
                             }
-                            mp3FileMetadataExtractor.extractTagFromMp3(songArray);
-
-                            for (var s : songArray) {
-                                songs.add(s);
-                            }
+                        } catch (IOException e) {
+                            System.err.println("Error: " + e.getMessage());
                         }
                         return songs;
                     }
                 };
-
-                // Führt Aktionen aus, wenn der Task erfolgreich abgeschlossen wurde.
-                //"WorkerStateEvents" reagieren auf den Status von Hintergrundprozessen. z.B. SUCCEEDED, FAILED, CANCELLED
-                task.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
-                    @Override
-                    public void handle(WorkerStateEvent workerStateEvent) {
-                        // Aktualisiert die `centerList` mit den geladenen Songs.
-                        centerList.setAll(task.getValue());
-                        // Setzt die aktualisierte Liste in die TableView.
-                        centerTableView.setItems(centerList);
-                        System.out.println("TableView updated with songs.");
-                    }
+                task.setOnSucceeded((workerStateEvent) -> {
+                    List<Song> songs = task.getValue();
+                    centerList.setAll(songs);
+                    //songs.setAll?
+                    centerTableView.setItems(centerList);
+                    System.out.println("TableView updated with songs.");
                 });
-
-                // registriert fehlerhafte Task-Ausführung.
                 task.setOnFailed(new EventHandler<WorkerStateEvent>() {
                     @Override
-                    public void handle(WorkerStateEvent workerStateEvent){
+                    public void handle(WorkerStateEvent workerStateEvent) {
                         System.err.println("Error during background task: " + task.getException().getMessage());
                     }
                 });
-
-                // Startet den Task in einem separaten Thread.
                 Thread thread = new Thread(task);
                 thread.setDaemon(true); // Falls Anwendung abgebrochen wird, wird Thread beendet.
                 thread.start();
             } else {
-                System.out.println("Not a directory");
+                System.out.println("Invalid selection");
             }
-        } else {
-            System.out.println("Invalid selection");
-        }
+        });
     }
+
+
+
 
     //Listen-Methoden
     private void addToQueue() {
@@ -672,7 +666,7 @@ public class Controller {
 
     //Lädt aktuellen Song als Text in die ProgressBar
     private void setProgressBarLabel() {
-        progressBarLabel.setText(currentQueue.get(countingIndex).getTitle());
+        progressBarLabel.setText(currentQueue.get(countingIndex).getTitle().toString());
     }
 
     //Druckt den aktuell spielenden Song fett in TableViews
@@ -1014,20 +1008,15 @@ private void cleanup() {
     //Veraltete Methode
     @FXML
     private void handleRefresh() {
-
     }
-
-
-
-
-
 
     //Parser-Methode
     private Media songToMedia(Song song) {
         if (song == null) {
             return null;
         }
-        return new Media(new File(song.getPath()).toURI().toString());
+        return new Media(song.getPath().toString());
+        //return new Media(new File(song.getPath()).toURI().toString());
     }
 }
 

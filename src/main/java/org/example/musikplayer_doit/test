@@ -1,0 +1,49 @@
+private void selectTreeItem() {
+    folderTreeView.onMouseClickedProperty().addListener(new ChangeListener<EventHandler<? super MouseEvent>>() {
+        @Override
+        public void changed(ObservableValue<? extends EventHandler<? super MouseEvent>> observableValue, EventHandler<? super MouseEvent> eventHandler, EventHandler<? super MouseEvent> t1) {
+            TreeItem<Path> selectedItem = folderTreeView.getSelectionModel().getSelectedItem();
+            if (selectedItem != null) {
+                centerList.clear();
+                Path folder = selectedItem.getValue();
+                System.out.println("Selected: " + folder.getRoot() + ": " + folder.getFileName());
+                mp3FileMetadataExtractor = new MP3FileMetadataExtractor();
+                Task<ObservableList<Song>> task = new Task<>() {
+                    ObservableList<Song> songs;
+
+                    @Override
+                    protected ObservableList<Song> call() {
+                        try (Stream<Path> contents = Files.list(folder)) {
+                            songs = FXCollections.observableArrayList();
+                            List<Path> fileList = new ArrayList<>(contents.filter(Files::isRegularFile).toList());
+                            for (var f : fileList) {
+                                Song song = new Song(f, null); //testweise
+                                mp3FileMetadataExtractor.extractTagFromMp3(song);
+                                songs.add(song);
+                            }
+                        } catch (IOException e) {
+                            System.err.println("Error: " + e.getMessage());
+                        }
+                        return songs;
+                    }
+                };
+                task.setOnSucceeded((workerStateEvent) -> {
+                    ObservableList<Song> songs = task.getValue();
+                    centerTableView.setItems(songs);
+                    System.out.println("TableView updated with songs.");
+                });
+                task.setOnFailed(new EventHandler<WorkerStateEvent>() {
+                    @Override
+                    public void handle(WorkerStateEvent workerStateEvent) {
+                        System.err.println("Error during background task: " + task.getException().getMessage());
+                    }
+                });
+                Thread thread = new Thread(task);
+                thread.setDaemon(true);
+                thread.start();
+            } else {
+                System.out.println("Invalid selection");
+            }
+        }
+    }); // <- fehlende Klammer und Semikolon ergänzt
+}

@@ -4,6 +4,7 @@ package org.example.musikplayer_doit.model;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @param mp3Paths Set(Path) containing a list of all unique Paths containing mp3 files

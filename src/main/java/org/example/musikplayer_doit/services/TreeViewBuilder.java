@@ -1,6 +1,8 @@
 package org.example.musikplayer_doit.services;
 
+import javafx.application.Platform;
 import javafx.concurrent.Task;
+import javafx.concurrent.Worker;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
@@ -13,12 +15,11 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.function.Consumer;
 
-public class TreeViewBuilder implements Consumer<Mp3FolderInfo> {
-
-    private final TreeView<File> folderTreeView;
+public class TreeViewBuilder {
+    private final TreeView<Path> folderTreeView;
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
 
-    public TreeViewBuilder (TreeView<File> folderTreeView){
+    public TreeViewBuilder (TreeView<Path> folderTreeView){
         this.folderTreeView = folderTreeView;
     }
 
@@ -28,38 +29,39 @@ public class TreeViewBuilder implements Consumer<Mp3FolderInfo> {
         //folderTreeView.setShowRoot(false);
     }
 
-    @Override
-    public void accept(Mp3FolderInfo mp3FolderInfo) {
+    public void receive(Mp3FolderInfo mp3FolderInfo) {
         Map<Path, Integer> map = mp3FolderInfo.folderMp3Count();
         Set<Path> set = mp3FolderInfo.mp3Paths();
         int count = mp3FolderInfo.mp3Count();
         System.out.println("Total number of mp3 files found: "+count);
         build(set);
+
     }
+
         public void buildTree(File[] directoryArray){
-        Mp3Scanner.collectMp3Folders(directoryArray, this);
+        Mp3Scanner.collectMp3Folders(directoryArray, this::receive);
     }
 
     private void build(Set<Path> uniquePaths){
-        Task<TreeItem<File>> task = new Task<>() {
+        Task<TreeItem<Path>> task = new Task<>() {
             @Override
-            protected TreeItem<File> call() throws Exception {
+            protected TreeItem<Path> call() throws Exception {
                 Set<Path> allUniquePaths = Mp3Scanner.getUniqueParentsSet(uniquePaths);
                 List<Path> allSortedPaths = sortPerLengthAndName(allUniquePaths);
 
-                Map<Path, TreeItem<File>> treeMap = new HashMap<>();
-                File rootFile = new File("My Computer");
-                TreeItem<File> rootItem = new TreeItem<>(rootFile);
-                treeMap.put(rootFile.toPath(), rootItem);
+                Map<Path, TreeItem<Path>> treeMap = new HashMap<>();
+                Path rootPath = new File("My Computer").toPath();
+                TreeItem<Path> rootItem = new TreeItem<>(rootPath);
+                treeMap.put(rootPath, rootItem);
 
                 for (Path path : allSortedPaths){
-                    //todo: an einem späteren Punkt mit Paths statt Files weiterarbeiten, und *alles* auf Paths aktualisieren
+                    //todo: an einem späteren Punkt mit Paths statt Paths weiterarbeiten, und *alles* auf Paths aktualisieren
                     //todo: Elternpfade und Einzigartigkeit werden später durch Map geregelt. Ggf. vereinfachen
-                    TreeItem<File> treeItem = treeMap.computeIfAbsent(path, p -> new TreeItem<>(p.toFile()));
+                    TreeItem<Path> treeItem = treeMap.computeIfAbsent(path, p -> new TreeItem<>(p));
                     Path parentPath = path.getParent();
-                    TreeItem<File> parentItem;
+                    TreeItem<Path> parentItem;
                     if (parentPath != null){
-                        parentItem = treeMap.computeIfAbsent(parentPath, p -> new TreeItem<>(p.toFile()));
+                        parentItem = treeMap.computeIfAbsent(parentPath, p -> new TreeItem<>());
                     } else {
                         parentItem = rootItem;
                     }
@@ -71,17 +73,45 @@ public class TreeViewBuilder implements Consumer<Mp3FolderInfo> {
             }
         };
         task.setOnSucceeded((worker) -> {
-            TreeItem<File> rootItem = task.getValue();
+            Set<Path> expandedPaths = new HashSet<>();
+            collectExpandedItems(folderTreeView.getRoot(), expandedPaths);
+            TreeItem<Path> rootItem = task.getValue();
             folderTreeView.setRoot(rootItem);
+
             System.out.println(">>>>>-----TreeView erfolgreich übergeben-----<<<<<");
-            rootItem.setExpanded(true);
+            restoreExpandedItems(rootItem, expandedPaths);
             folderTreeView.setMouseTransparent(false);
             folderTreeView.setOpacity(1);
+
+            //rootItem.setExpanded(false);
             //todo: verschiedene Grafiken (oder zB. opacity?) für treeItems mit / ohne Musikordnern anzeigen
         });
 
         Thread thread = new Thread(task);
         thread.start();
+    }
+
+    private void collectExpandedItems(TreeItem<Path> item, Set<Path> expanded) {
+        if (item != null) {
+            if (item.isExpanded() && item.getValue() != null) {
+                expanded.add(item.getValue());
+            }
+            for (var child : item.getChildren()) {
+                collectExpandedItems(child, expanded);
+                System.out.println("Collect expanded children");
+            }
+        }
+    }
+
+    private void restoreExpandedItems(TreeItem<Path> item, Set<Path> expanded) {
+        if (item != null){
+            if (item.getValue() != null && expanded.contains(item.getValue())) {
+                item.setExpanded(true);
+            }
+            for (TreeItem<Path> child : item.getChildren()) {
+                restoreExpandedItems(child, expanded);
+            }
+        }
     }
 
     private boolean containsMP3Files(File directory) {
@@ -132,7 +162,6 @@ public class TreeViewBuilder implements Consumer<Mp3FolderInfo> {
         return null;
     }
 
-
     //Cellfactory customizes default rendering of cells in a ListView, TableView, TreeView
     //item und empty werden von JavaFX vorgegeben
     //setRowFactory nimmt Callback an, welcher eine TableRow erstellt.
@@ -144,54 +173,27 @@ public class TreeViewBuilder implements Consumer<Mp3FolderInfo> {
     // neuen anonymen Klasse definiert. Zum Beispiel hier möchte man nur den Style setzen, und den Rest der Eigenschaften unangetastet
     // lassen. Darum wird die nächste valide Implementierung der Methode in einer Elternklasse aufgerufen, um diese Kernfunktionen zu
     // gewährleisten.
-    public void applyCellFactory() {
-        folderTreeView.setCellFactory(new Callback<TreeView<File>, TreeCell<File>>() {
+
+    public void applyCellFactory(){
+        folderTreeView.setCellFactory(new Callback<TreeView<Path>, TreeCell<Path>>() {
             @Override
-            public TreeCell<File> call(TreeView<File> fileTreeView) {
+            public TreeCell<Path> call(TreeView<Path> folderTreevie) {
                 return new TreeCell<>() {
                     @Override
-                    protected void updateItem(File item, boolean empty) {
+                    protected void updateItem(Path item, boolean empty){
                         super.updateItem(item, empty);
-                        if (item != null && !empty) {
-                            setText(item.getName());
-                        }
-                        if (item != null) {
-                            if (item.getName().isEmpty()) {
-                                setText(item.getAbsolutePath());
-                                System.err.println("Setting path instead of name for " + item);
-                            }
-                        }
-                        if (item == null && empty) {
-                            setText("");
+                        if (empty || item == null){
+                            setText(null);
                             setGraphic(null);
+                        } else if (item.getFileName() == null){
+                            setText(item.toString());
+                        } else {
+                            setText(item.getFileName().toString());
                         }
                     }
                 };
             }
         });
     }
+
 }
-
-                  // Datentyp-Umwandlung einer Liste via Stream
-//                List<String> pathList = allSortedPaths.stream()
-//                        .map(Path::toString)
-//                        .toList();
-//                Path outputFile = Paths.get("paths.txt");
-//                try{
-//                    Files.write(outputFile, pathList,StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-//                } catch (IOException e){
-//                    System.err.println(e.getMessage());
-//                }
-
-                  // Validierung ob alle Path Parents in Liste vorhanden sind
-//                Set<Path> seenCheck = new HashSet<>();
-//                for (var path : paths){
-//                    Path parent = path.getParent();
-//                    while (parent != null){
-//                        if (!seenCheck.contains(parent)){
-//                            System.err.println("Fehlender Elternpfad: "+parent);
-//                        }
-//                        parent = parent.getParent();
-//                    }
-//                    seenCheck.add(path);
-//                }

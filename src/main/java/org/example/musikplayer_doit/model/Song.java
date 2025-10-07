@@ -4,33 +4,36 @@
 package org.example.musikplayer_doit.model;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
 public class Song {
 
     //
-    private String title;
-    private File file;
-    private String path;
+    private Path title;
+    private Path path;
     private String genre;
     private String album;
     private String artist;
     private Map<String, Object> metadata;
 
-
-    public Song (String filePath, Map<String, Object> metadata){
-        this.file = new File(filePath);
-        this.title = file.getName();
+    /**
+     *
+     * @param filePath
+     * @param metadata
+     */
+    public Song (Path filePath, Map<String, Object> metadata){
+        this.title = filePath.getFileName();
         this.path = filePath;
 
     }
 
-    public String getTitle() {
+    public Path getTitle() {
         return title;
     }
 
-    public String getPath() {
+    public Path getPath() {
         return path;
     }
     public String getAlbum() {

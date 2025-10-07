@@ -55,9 +55,15 @@ private static Mp3FolderInfo mp3FolderInfo;
         }
     }
 
+    private static void unlock(){
+
+    }
+
+
         private static Mp3FolderInfo scanFolders(File drive, Collection<String> excludedFolders, Set<Path> allMp3Paths, Map<Path, Integer> mp3CountPerDir){
             AtomicInteger fileCount = new AtomicInteger(0);
             AtomicInteger mp3AtomicCount = new AtomicInteger(0);
+            AtomicInteger errorCount = new AtomicInteger(0);
             try {
                 Files.walkFileTree(drive.toPath(), new FileVisitor<Path>() {
                     @Override
@@ -114,6 +120,7 @@ private static Mp3FolderInfo mp3FolderInfo;
 
                     @Override
                     public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+                        errorCount.incrementAndGet();
                         if (exc != null) {
                             System.err.println("Fehler beim Zugriff auf " + file + ": " + exc.getClass().getSimpleName() +": "+exc.getMessage());
                             //throw new IOException(exc);
@@ -144,6 +151,7 @@ private static Mp3FolderInfo mp3FolderInfo;
                     }
                 });
             } catch (IOException e) {
+                //errorCount.incrementAndGet();
                 System.err.println("Failed to scan drive "+drive+", "+e.getMessage());
             }
             System.out.println("Total length of recursion of drive "+drive+": "+fileCount);
